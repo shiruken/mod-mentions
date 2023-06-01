@@ -1,8 +1,6 @@
 import {
-  Comment,
   Devvit,
   RedditAPIClient,
-  Subreddit
  } from '@devvit/public-api';
 import { CommentSubmit, Metadata } from '@devvit/protos';
 
@@ -32,7 +30,22 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
     console.log(`${comment.id} mentions u/${moderator}`);
 
     // Report Comment
-    await reportComment(comment, moderator, metadata);
+    await lc.Report(
+      {
+        thingId: comment.id,
+        reason: `Comment mentions the moderator u/${moderator}`
+      },
+      metadata
+    );
+    console.log(`Reported ${comment.id}`);
+  
+    // Lock Comment
+    await comment.lock();
+    console.log(`Locked ${comment.id}`);
+  
+    // Remove Comment
+    await comment.remove();
+    console.log(`Removed ${comment.id}`);
 
     // Send Modmail
     const permalink = `https://www.reddit.com/r/${subreddit.name}` + 
@@ -41,32 +54,16 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
     const text = `The following comment by u/${comment.authorName} mentions the moderator u/${moderator}:\n\n` +
                  `**Link:** ${permalink}\n\n` +
                  `**Body:** ${comment.body}`
-    await sendModmail(subreddit, text, metadata);
-
+    await reddit.sendPrivateMessage(
+      {
+        to: `/r/${subreddit.name}`,
+        subject: "Moderator Mentioned",
+        text: text,
+      },
+      metadata
+    );
+    console.log(`Sent modmail about ${comment.id}`); 
   }
-}
-
-async function reportComment(comment: Comment, moderator: string, metadata?: Metadata) {
-  await lc.Report(
-    {
-      thingId: comment.id,
-      reason: `Comment mentions the moderator u/${moderator}`
-    },
-    metadata
-  );
-  console.log('Reported comment');
-}
-
-async function sendModmail(subreddit: Subreddit, text: string, metadata?: Metadata) {
-  await reddit.sendPrivateMessage(
-    {
-      to: `/r/${subreddit.name}`,
-      subject: "Moderator Mentioned",
-      text: text,
-    },
-    metadata
-  );
-  console.log('Sent modmail');
 }
 
 export default Devvit;
