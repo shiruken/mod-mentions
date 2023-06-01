@@ -24,7 +24,7 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
   // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
   const comment = await reddit.getCommentById(String(event.comment?.id), metadata);
   const bodyLowerCase = comment.body.toLowerCase();
-  const index = moderators.findIndex(v => bodyLowerCase.includes(v.toLowerCase()));
+  const index = moderators.findIndex(v => bodyLowerCase.includes(`u/${v.toLowerCase()}`));
 
   if (index >= 0) {
 
@@ -54,6 +54,7 @@ async function reportComment(comment: Comment, moderator: string, metadata?: Met
     },
     metadata
   );
+  console.log('Reported comment');
 }
 
 async function sendModmail(subreddit: Subreddit, text: string, metadata?: Metadata) {
@@ -65,6 +66,7 @@ async function sendModmail(subreddit: Subreddit, text: string, metadata?: Metada
     },
     metadata
   );
+  console.log('Sent modmail');
 }
 
 export default Devvit;
