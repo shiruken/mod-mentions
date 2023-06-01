@@ -45,7 +45,7 @@ Devvit.addSettings([
     helpText: 'Send notification to Slack about content that mentions a subreddit moderator',
     defaultValue: "",
     onValidate: (event) => {
-      if (!(event.value === "") && !(event.value?.startsWith("https://hooks.slack.com/")))
+      if (event.value && !(event.value?.startsWith("https://hooks.slack.com/")))
         return "Must be valid Slack webhook URL";
     }
   },
@@ -56,7 +56,7 @@ Devvit.addSettings([
     helpText: 'Send notification to Discord about content that mentions a subreddit moderator',
     defaultValue: "",
     onValidate: (event) => {
-      if (!(event.value === "") && !(event.value?.startsWith("https://discord.com/api/webhooks/")))
+      if (event.value && !(event.value?.startsWith("https://discord.com/api/webhooks/")))
         return "Must be valid Discord webhook URL";
     }
   }
@@ -75,6 +75,9 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
   const modmailContent = await getSetting('modmailContent', metadata) as boolean;
   const slackWebhook = await getSetting('slackWebhook', metadata) as string;
   const discordWebhook = await getSetting('discordWebhook', metadata) as string;
+
+  if (!reportContent && !lockContent && !removeContent && !modmailContent && !slackWebhook && !discordWebhook)
+    throw new Error('No actions are enabled in app configuration');
 
   const subreddit = await reddit.getSubredditById(String(event.subreddit?.id), metadata);
   const moderators = [];
