@@ -65,8 +65,8 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
     );
     console.log(`Sent modmail about ${comment.id}`);
 
-    // Send Slack
-    const blocks = {
+    // Send to Slack
+    const slack_payload = {
       blocks: [
         {
           type: "section",
@@ -87,14 +87,47 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
           ]
         }
       ]
-    }
-    const webhook = "https://hooks.slack.com/services/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";
-    await fetch(webhook, {
+    };
+    const slack_webhook = "https://hooks.slack.com/services/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";
+    await fetch(slack_webhook, {
       method: 'POST',
-      body: JSON.stringify(blocks)
+      body: JSON.stringify(slack_payload)
     });
     console.log(`Sent Slack message about ${comment.id}`);
   
+    // Send to Discord
+    const discord_payload = {
+      username: "Moderator Mentions",
+      content: `u/${moderator} has been mentioned in a comment`,
+      embeds: [
+        {
+          fields: [
+            {
+              name: "Link",
+              value: permalink
+            },
+            {
+              name: "User",
+              value: `[u/${comment.authorName}](https://www.reddit.com/user/${comment.authorName})`
+            },
+            {
+              name: "Body",
+              value: comment.body
+            }
+          ]
+        }
+      ]
+    };
+    const discord_webhook = "https://discord.com/api/webhooks/";
+    await fetch(discord_webhook, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(discord_payload)
+    });
+    console.log(`Sent Discord message about ${comment.id}`);
+
   }
 }
 
