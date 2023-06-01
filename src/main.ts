@@ -6,6 +6,7 @@ import { CommentSubmit, Metadata } from '@devvit/protos';
 
 const reddit = new RedditAPIClient();
 const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
+Devvit.use(Devvit.Types.HTTP);
 
 Devvit.addTrigger({
   event: Devvit.Trigger.CommentSubmit,
@@ -62,7 +63,38 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
       },
       metadata
     );
-    console.log(`Sent modmail about ${comment.id}`); 
+    console.log(`Sent modmail about ${comment.id}`);
+
+    // Send Slack
+    const blocks = {
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `u/${moderator} has been mentioned in a comment:`
+          }
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: `*Link:* ${permalink}\n` +
+                    `*User:* <https://www.reddit.com/user/${comment.authorName}|u/${comment.authorName}>\n` + 
+                    `*Body:* ${comment.body}`
+            }
+          ]
+        }
+      ]
+    }
+    const webhook = "https://hooks.slack.com/services/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";
+    await fetch(webhook, {
+      method: 'POST',
+      body: JSON.stringify(blocks)
+    });
+    console.log(`Sent Slack message about ${comment.id}`);
+  
   }
 }
 
