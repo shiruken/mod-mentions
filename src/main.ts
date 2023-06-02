@@ -59,6 +59,13 @@ Devvit.addSettings([
       if (event.value && !(event.value?.startsWith("https://discord.com/api/webhooks/")))
         return "Must be valid Discord webhook URL";
     }
+  },
+  {
+    type: 'string',
+    name: 'excludedMods',
+    label: 'Exclude Moderators',
+    helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions',
+    defaultValue: "AutoModerator, mod-mentions"
   }
 ]);
 
@@ -79,10 +86,17 @@ async function checkCommentModMention(event: CommentSubmit, metadata?: Metadata)
   if (!reportContent && !lockContent && !removeContent && !modmailContent && !slackWebhook && !discordWebhook)
     throw new Error('No actions are enabled in app configuration');
 
+  let excludedMods = await getSetting('excludedMods', metadata) as string;
+  excludedMods = excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
+  const excludedModsList = excludedMods.toLowerCase().split(",");
+
+  // Get list of subreddit moderators, excluding any defined in configuration
+  // Has trouble on subreddits with a large number of moderators (e.g. r/science)
   const subreddit = await reddit.getSubredditById(String(event.subreddit?.id), metadata);
   const moderators = [];
   for await(const moderator of subreddit.getModerators())
-    moderators.push(moderator.username);
+    if (!excludedModsList.includes(moderator.username.toLowerCase()))
+      moderators.push(moderator.username);
 
   // Check if any subreddit moderators are mentioned in comment text
   // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
