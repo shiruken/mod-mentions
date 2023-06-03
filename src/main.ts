@@ -36,24 +36,16 @@ Devvit.addSettings([
   },
   {
     type: 'string',
-    name: 'slackWebhook',
-    label: 'Slack Webhook URL',
-    helpText: 'Send notification to Slack about content that mentions a subreddit moderator',
+    name: 'webhookURL',
+    label: 'Webhook URL (Slack or Discord)',
+    helpText: 'Send notification to Slack or Discord about content that mentions a subreddit moderator',
     defaultValue: "",
     onValidate: (event) => {
-      if (event.value && !(event.value?.startsWith("https://hooks.slack.com/")))
-        return "Must be valid Slack webhook URL";
-    }
-  },
-  {
-    type: 'string',
-    name: 'discordWebhook',
-    label: 'Discord Webhook URL',
-    helpText: 'Send notification to Discord about content that mentions a subreddit moderator',
-    defaultValue: "",
-    onValidate: (event) => {
-      if (event.value && !(event.value?.startsWith("https://discord.com/api/webhooks/")))
-        return "Must be valid Discord webhook URL";
+      if (event.value && !(
+           event.value?.startsWith("https://hooks.slack.com/") || 
+           event.value?.startsWith("https://discord.com/api/webhooks/")
+         ))
+        return "Must be valid Slack or Discord webhook URL";
     }
   },
   {
@@ -93,10 +85,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   const lockContent = await getSetting('lockContent', metadata) as boolean;
   const removeContent = await getSetting('removeContent', metadata) as boolean;
   const modmailContent = await getSetting('modmailContent', metadata) as boolean;
-  const slackWebhook = await getSetting('slackWebhook', metadata) as string;
-  const discordWebhook = await getSetting('discordWebhook', metadata) as string;
+  const webhookURL = await getSetting('webhookURL', metadata) as string;
 
-  if (!reportContent && !lockContent && !removeContent && !modmailContent && !slackWebhook && !discordWebhook) {
+  if (!reportContent && !lockContent && !removeContent && !modmailContent && !webhookURL) {
     console.error('No actions are enabled in app configuration');
     return;
   }
@@ -206,7 +197,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Send to Slack
-    if (slackWebhook) {
+    if (webhookURL && webhookURL.startsWith("https://hooks.slack.com/")) {
       const slackPayload = {
         blocks: [
           {
@@ -233,7 +224,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
       };
       
       try {
-        await fetch(slackWebhook, {
+        await fetch(webhookURL, {
           method: 'POST',
           body: JSON.stringify(slackPayload)
         });
@@ -244,7 +235,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Send to Discord
-    if (discordWebhook) {
+    if (webhookURL && webhookURL.startsWith("https://discord.com/api/webhooks/")) {
       const discordPayload = {
         username: "Moderator Mentions",
         content: `The moderator [u/${moderator}](https://www.reddit.com/user/${moderator}) ` +
@@ -279,7 +270,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
         });
 
       try {
-        await fetch(discordWebhook, {
+        await fetch(webhookURL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
