@@ -1,8 +1,9 @@
-import { Devvit, RedditAPIClient, Post, Comment, getSetting } from '@devvit/public-api';
+import { Devvit, RedditAPIClient, KeyValueStorage, Post, Comment, getSetting } from '@devvit/public-api';
 import { Metadata } from '@devvit/protos';
 
 const reddit = new RedditAPIClient();
 const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
+const kv = new KeyValueStorage();
 Devvit.use(Devvit.Types.HTTP);
 
 Devvit.addSettings([
@@ -137,6 +138,18 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     const moderator = moderators[index];
     console.log(`${object.id}${ isEdit ? " (edited) " : " " }mentions u/${moderator}`);
 
+    // Track how many times a user has mentioned a subreddit moderator
+    let count = 0;
+    try {
+      count = await kv.get(object.authorName, metadata, 0) as number;
+      count = count + 1;
+      await kv.put(object.authorName, count, metadata);
+      if (count > 1)
+        console.log(`u/${object.authorName} has mentioned r/${subreddit.name} moderators ${count} times`);
+    } catch(err) {
+      console.error(`Error counting u/${object.authorName} moderator mentions: ${err}`);
+    }
+
     // Report Content
     if (reportContent) {
       try {
@@ -179,7 +192,8 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
-                   ((object.body) ? `\n\n* **Body:** ${object.body}` : "");
+                   ((object.body) ? `\n\n* **Body:** ${object.body}` : "") +
+                   ((count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${subreddit.name} moderators ${count} times)` : "");
 
       try {
         await reddit.sendPrivateMessage(
@@ -216,7 +230,8 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                 text: `https://www.reddit.com${object.permalink}\n` +
                       `*User:* <https://www.reddit.com/user/${object.authorName}|u/${object.authorName}>` +
                       (('title' in object) ? `\n*Title:* ${object.title}` : "") +
-                      ((object.body) ? `\n*Body:* ${object.body}` : "")
+                      ((object.body) ? `\n*Body:* ${object.body}` : "") +
+                      ((count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${subreddit.name} moderators ${count} times_` : "")
               }
             ]
           }
@@ -252,7 +267,10 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                 name: "User",
                 value: `[u/${object.authorName}](https://www.reddit.com/user/${object.authorName})`
               }
-            ]
+            ],
+            footer: {
+              text: '\u200b'
+            }
           }
         ]
       };
@@ -268,6 +286,10 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           name: "Body",
           value: object.body
         });
+
+      if (count > 1)
+        discordPayload.embeds[0].footer.text = `u/${object.authorName} has mentioned r/${subreddit.name} ` +
+                                               `moderators ${count} times`;
 
       try {
         await fetch(webhookURL, {
