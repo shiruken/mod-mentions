@@ -126,26 +126,38 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
 
     // Report Content
     if (reportContent) {
-      await lc.Report(
-        {
-          thingId: object.id,
-          reason: `Mentions moderator u/${moderator}`
-        },
-        metadata
-      );
-      console.log(`Reported ${object.id}`);
+      try {
+        await lc.Report(
+          {
+            thingId: object.id,
+            reason: `Mentions moderator u/${moderator}`
+          },
+          metadata
+        );
+        console.log(`Reported ${object.id}`);  
+      } catch(err) {
+        console.error(`Error reporting ${object.id}: ${err}`);
+      }
     }
 
     // Lock Content
     if (lockContent) {
-      await object.lock();
-      console.log(`Locked ${object.id}`);
+      try {
+        await object.lock();
+        console.log(`Locked ${object.id}`);  
+      } catch(err) {
+        console.error(`Error locking ${object.id}: ${err}`);
+      }
     }
 
     // Remove Content
     if (removeContent) {
-      await object.remove();
-      console.log(`Removed ${object.id}`);
+      try {
+        await object.remove();
+        console.log(`Removed ${object.id}`);  
+      } catch(err) {
+        console.error(`Error removing ${object.id}: ${err}`);
+      }
     }
     
     // Send Modmail
@@ -155,15 +167,20 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
                    ((object.body) ? `\n\n* **Body:** ${object.body}` : "");
-      await reddit.sendPrivateMessage(
-        {
-          to: `/r/${subreddit.name}`,
-          subject: "Moderator Mentioned",
-          text: text,
-        },
-        metadata
-      );
-      console.log(`Sent modmail about ${object.id}`);
+
+      try {
+        await reddit.sendPrivateMessage(
+          {
+            to: `/r/${subreddit.name}`,
+            subject: "Moderator Mentioned",
+            text: text,
+          },
+          metadata
+        );
+        console.log(`Sent modmail about ${object.id}`);
+      } catch(err) {
+        console.error(`Error sending modmail about ${object.id}: ${err}`);
+      }
     }
 
     // Send to Slack
@@ -191,11 +208,16 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           }
         ]
       };
-      await fetch(slackWebhook, {
-        method: 'POST',
-        body: JSON.stringify(slackPayload)
-      });
-      console.log(`Sent Slack message about ${object.id}`);
+      
+      try {
+        await fetch(slackWebhook, {
+          method: 'POST',
+          body: JSON.stringify(slackPayload)
+        });
+        console.log(`Sent Slack message about ${object.id}`);
+      } catch(err) {
+        console.error(`Error sending Slack message about ${object.id}: ${err}`);
+      }
     }
 
     // Send to Discord
@@ -232,14 +254,18 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           value: object.body
         });
 
-      await fetch(discordWebhook, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(discordPayload)
-      });
-      console.log(`Sent Discord message about ${object.id}`);
+      try {
+        await fetch(discordWebhook, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(discordPayload)
+        });
+        console.log(`Sent Discord message about ${object.id}`);
+      } catch(err) {
+        console.error(`Error sending Discord message about ${object.id}: ${err}`);
+      }
     }
   }
 }
