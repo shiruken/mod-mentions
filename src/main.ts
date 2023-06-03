@@ -62,16 +62,33 @@ Devvit.addSettings([
     label: 'Exclude Moderators',
     helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions',
     defaultValue: "AutoModerator"
+  },
+  {
+    type: 'boolean',
+    name: 'includeEdited',
+    label: 'Include Edited Content',
+    helpText: 'Watch for edited content that mentions a subreddit moderator',
+    defaultValue: false
   }
 ]);
 
 Devvit.addTrigger({
-  events: [Devvit.Trigger.PostSubmit, Devvit.Trigger.CommentSubmit],
-  handler: checkModMention,
+  events: [
+    Devvit.Trigger.PostSubmit,
+    Devvit.Trigger.PostUpdate,
+    Devvit.Trigger.CommentSubmit,
+    Devvit.Trigger.CommentUpdate
+  ],
+  handler: checkModMention
 });
 
 async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metadata) {
-  
+
+  const includeEdited = await getSetting('includeEdited', metadata) as boolean;
+  const isEdit = (event.type === Devvit.Trigger.PostUpdate) || (event.type === Devvit.Trigger.CommentUpdate);
+  if (!includeEdited && isEdit)
+    return;
+
   const reportContent = await getSetting('reportContent', metadata) as boolean;
   const lockContent = await getSetting('lockContent', metadata) as boolean;
   const removeContent = await getSetting('removeContent', metadata) as boolean;
@@ -97,14 +114,19 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (!excludedModsList.includes(moderator.username.toLowerCase()))
       moderators.push(moderator.username);
 
+  if (!moderators.length) {
+    console.error(`All moderators are excluded: ${excludedModsList.join(', ')}`);
+    return;
+  }
+
   let object: Post | Comment;
   let text: string;
   let type: string;
-  if (event.type === Devvit.Trigger.PostSubmit) {
+  if (event.type === Devvit.Trigger.PostSubmit || event.type === Devvit.Trigger.PostUpdate) {
     type = "post";
     object = await reddit.getPostById(String(event.event.post?.id), metadata);
     text = object.title + " " + String(object.body);
-  } else if (event.type === Devvit.Trigger.CommentSubmit) {
+  } else if (event.type === Devvit.Trigger.CommentSubmit || event.type === Devvit.Trigger.CommentUpdate) {
     type = "comment";
     object = await reddit.getCommentById(String(event.event.comment?.id), metadata);
     text = object.body;
@@ -122,7 +144,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   if (index >= 0) {
 
     const moderator = moderators[index];
-    console.log(`${object.id} mentions u/${moderator}`);
+    console.log(`${object.id}${ isEdit ? " (edited) " : " " }mentions u/${moderator}`);
 
     // Report Content
     if (reportContent) {
@@ -134,9 +156,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           metadata
         );
-        console.log(`Reported ${object.id}`);  
+        console.log(`Reported ${object.id}${ isEdit ? " (edited)" : "" }`);  
       } catch(err) {
-        console.error(`Error reporting ${object.id}: ${err}`);
+        console.error(`Error reporting ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
 
@@ -144,9 +166,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (lockContent) {
       try {
         await object.lock();
-        console.log(`Locked ${object.id}`);  
+        console.log(`Locked ${object.id}${ isEdit ? " (edited)" : "" }`);  
       } catch(err) {
-        console.error(`Error locking ${object.id}: ${err}`);
+        console.error(`Error locking ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
 
@@ -154,15 +176,15 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (removeContent) {
       try {
         await object.remove();
-        console.log(`Removed ${object.id}`);  
+        console.log(`Removed ${object.id}${ isEdit ? " (edited)" : "" }`);  
       } catch(err) {
-        console.error(`Error removing ${object.id}: ${err}`);
+        console.error(`Error removing ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
     
     // Send Modmail
     if (modmailContent) {
-      const text = `The moderator u/${moderator} has been mentioned in a ${type}:\n\n` +
+      const text = `The moderator u/${moderator} has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}:\n\n` +
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
@@ -177,9 +199,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           metadata
         );
-        console.log(`Sent modmail about ${object.id}`);
+        console.log(`Sent modmail about ${object.id}${ isEdit ? " (edited)" : "" }`);
       } catch(err) {
-        console.error(`Error sending modmail about ${object.id}: ${err}`);
+        console.error(`Error sending modmail about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
 
@@ -191,7 +213,8 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `The moderator <https://www.reddit.com/user/${moderator}|u/${moderator}> has been mentioned in a ${type}:`
+              text: `The moderator <https://www.reddit.com/user/${moderator}|u/${moderator}> ` +
+                    `has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}:`
             }
           },
           {
@@ -214,9 +237,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           method: 'POST',
           body: JSON.stringify(slackPayload)
         });
-        console.log(`Sent Slack message about ${object.id}`);
+        console.log(`Sent Slack message about ${object.id}${ isEdit ? " (edited)" : "" }`);
       } catch(err) {
-        console.error(`Error sending Slack message about ${object.id}: ${err}`);
+        console.error(`Error sending Slack message about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
 
@@ -224,10 +247,11 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (discordWebhook) {
       const discordPayload = {
         username: "Moderator Mentions",
-        content: `The moderator [u/${moderator}](https://www.reddit.com/user/${moderator}) has been mentioned in a post`,
+        content: `The moderator [u/${moderator}](https://www.reddit.com/user/${moderator}) ` +
+                 `has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}`,
         embeds: [
           {
-            color: 16711680,
+            color: 16711680, // #FF0000
             fields: [
               {
                 name: "Link",
@@ -262,9 +286,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           body: JSON.stringify(discordPayload)
         });
-        console.log(`Sent Discord message about ${object.id}`);
+        console.log(`Sent Discord message about ${object.id}${ isEdit ? " (edited)" : "" }`);
       } catch(err) {
-        console.error(`Error sending Discord message about ${object.id}: ${err}`);
+        console.error(`Error sending Discord message about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
       }
     }
   }
