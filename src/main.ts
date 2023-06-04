@@ -1,9 +1,13 @@
-import { Devvit, RedditAPIClient, KeyValueStorage, Post, Comment, getSetting, Context, SubredditContextActionEvent } from '@devvit/public-api';
+import {
+  Devvit, RedditAPIClient, Post, Comment, getSetting, 
+  Context, SubredditContextActionEvent
+} from '@devvit/public-api';
 import { Metadata } from '@devvit/protos';
+
+import { getUser, storeUser, getUsersCountSorted } from "./storage.js";
 
 const reddit = new RedditAPIClient();
 const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
-const kv = new KeyValueStorage();
 Devvit.use(Devvit.Types.HTTP);
 
 Devvit.addSettings([
@@ -55,13 +59,6 @@ Devvit.addSettings([
     label: 'Exclude Moderators',
     helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions',
     defaultValue: "AutoModerator"
-  },
-  {
-    type: 'boolean',
-    name: 'includeEdited',
-    label: 'Include Edited Content',
-    helpText: 'Watch for edited content that mentions a subreddit moderator',
-    defaultValue: false
   }
 ]);
 
@@ -84,11 +81,6 @@ Devvit.addAction({
 
 async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metadata) {
 
-  const includeEdited = await getSetting('includeEdited', metadata) as boolean;
-  const isEdit = (event.type === Devvit.Trigger.PostUpdate) || (event.type === Devvit.Trigger.CommentUpdate);
-  if (!includeEdited && isEdit)
-    return;
-
   const reportContent = await getSetting('reportContent', metadata) as boolean;
   const lockContent = await getSetting('lockContent', metadata) as boolean;
   const removeContent = await getSetting('removeContent', metadata) as boolean;
@@ -97,6 +89,30 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
 
   if (!reportContent && !lockContent && !removeContent && !modmailContent && !webhookURL) {
     console.error('No actions are enabled in app configuration');
+    return;
+  }
+
+  let object: Post | Comment;
+  let text: string;
+  let type: string;
+  if (event.type === Devvit.Trigger.PostSubmit || event.type === Devvit.Trigger.PostUpdate) {
+    type = "post";
+    object = await reddit.getPostById(String(event.event.post?.id), metadata);
+    text = object.title + " " + String(object.body);
+  } else if (event.type === Devvit.Trigger.CommentSubmit || event.type === Devvit.Trigger.CommentUpdate) {
+    type = "comment";
+    object = await reddit.getCommentById(String(event.event.comment?.id), metadata);
+    text = object.body;
+  } else {
+    console.error('Unexpected trigger type: %d', event.type);
+    return;
+  }
+
+  // Skip content already tracked in user's recent history
+  // Avoid repeated triggers from user editing
+  const user = await getUser(object.authorName, metadata!);
+  if (user.objects.includes(object.id)) {
+    console.log(`${object.id} by u/${object.authorName} already tracked. Skipping.`);
     return;
   }
 
@@ -118,22 +134,6 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     return;
   }
 
-  let object: Post | Comment;
-  let text: string;
-  let type: string;
-  if (event.type === Devvit.Trigger.PostSubmit || event.type === Devvit.Trigger.PostUpdate) {
-    type = "post";
-    object = await reddit.getPostById(String(event.event.post?.id), metadata);
-    text = object.title + " " + String(object.body);
-  } else if (event.type === Devvit.Trigger.CommentSubmit || event.type === Devvit.Trigger.CommentUpdate) {
-    type = "comment";
-    object = await reddit.getCommentById(String(event.event.comment?.id), metadata);
-    text = object.body;
-  } else {
-    console.error('Unexpected trigger type: %d', event.type);
-    return;
-  }
-
   // Check if any subreddit moderators are mentioned
   // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
   text = text.toLowerCase();
@@ -143,19 +143,16 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   if (index >= 0) {
 
     const moderator = moderators[index];
+    const isEdit = (event.type === Devvit.Trigger.PostUpdate) || (event.type === Devvit.Trigger.CommentUpdate);
     console.log(`${object.id}${ isEdit ? " (edited) " : " " }mentions u/${moderator}`);
 
-    // Track how many times a user has mentioned a subreddit moderator
-    let count = 0;
-    try {
-      count = await kv.get(object.authorName, metadata, 0) as number;
-      count += 1;
-      await kv.put(object.authorName, count, metadata);
-      if (count > 1)
-        console.log(`u/${object.authorName} has mentioned r/${subreddit.name} moderators ${count.toLocaleString()} times`);
-    } catch(err) {
-      console.error(`Error counting u/${object.authorName} moderator mentions: ${err}`);
-    }
+    // Track object and update user in kvstore
+    user.count += 1;
+    user.objects.push(object.id);
+    await storeUser(object.authorName, user, metadata!);
+    if (user.count > 1)
+      console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
+                  `moderators ${user.count.toLocaleString()} times`);
 
     // Report Content
     if (reportContent) {
@@ -200,8 +197,8 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
                    ((object.body) ? `\n\n* **Body:** ${object.body}` : "") +
-                   ((count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${subreddit.name} ` + 
-                                  `moderators ${count.toLocaleString()} times)` : "");
+                   ((user.count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${subreddit.name} ` + 
+                                       `moderators ${user.count.toLocaleString()} times)` : "");
 
       try {
         await reddit.sendPrivateMessage(
@@ -239,8 +236,8 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
                       `*User:* <https://www.reddit.com/user/${object.authorName}|u/${object.authorName}>` +
                       (('title' in object) ? `\n*Title:* ${object.title}` : "") +
                       ((object.body) ? `\n*Body:* ${object.body}` : "") +
-                      ((count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${subreddit.name} ` +
-                                     `moderators ${count.toLocaleString()} times_` : "")
+                      ((user.count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${subreddit.name} ` +
+                                          `moderators ${user.count.toLocaleString()} times_` : "")
               }
             ]
           }
@@ -296,9 +293,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           value: object.body
         });
 
-      if (count > 1)
+      if (user.count > 1)
         discordPayload.embeds[0].footer.text = `u/${object.authorName} has mentioned r/${subreddit.name} ` +
-                                               `moderators ${count.toLocaleString()} times`;
+                                               `moderators ${user.count.toLocaleString()} times`;
 
       try {
         await fetch(webhookURL, {
@@ -321,20 +318,13 @@ async function generateLeaderboard(event: SubredditContextActionEvent, metadata?
   const currentUser = await reddit.getCurrentUser(metadata);
   console.log(`u/${currentUser.username} requested the leaderboard`);
 
-  const keys = await kv.list(metadata);
-  const leaderboard: [string, number][] = [];
-  for (const key of keys) {
-    const count = await kv.get(key, metadata) as number;
-    leaderboard.push([key, count]);
-  }
-
+  const leaderboard = await getUsersCountSorted(metadata!);
   if (!leaderboard.length) {
     console.warn(`Unable to generate leaderboard. No users tracked yet.`);
-    return { success: false, message: 'Unable to generate leaderboard. No users tracked yet.' };
+    return { success: false, message: 'No users tracked yet, unable to generate leaderboard!' };
   }
 
   // Generate Top 10 table
-  leaderboard.sort((a, b) => b[1] - a[1]);
   let table = "|**Rank**|**Username**|**Count**|\n" +
               "|--:|:--|:--|\n";
   for (let i = 0; i < Math.min(10, leaderboard.length); i++)
@@ -362,5 +352,17 @@ async function generateLeaderboard(event: SubredditContextActionEvent, metadata?
     return { success: false, message: 'Error generating leaderboard!' };
   }
 }
+
+// Devvit.addAction({
+//   name: 'Reset KVStore',
+//   description: 'Reset KVStore',
+//   context: Context.SUBREDDIT,
+//   handler: async (_event, metadata?) => {
+//     const currentUser = await reddit.getCurrentUser(metadata);
+//     console.log(`u/${currentUser.username} reset the KVStore`);
+//     await resetKVStore(metadata!);
+//     return { success: true, message: 'KVStore Reset!' };
+//   }
+// });
 
 export default Devvit;
