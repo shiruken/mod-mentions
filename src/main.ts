@@ -49,8 +49,9 @@ Devvit.addSettings([
       if (event.value && !(
            event.value?.startsWith("https://hooks.slack.com/") || 
            event.value?.startsWith("https://discord.com/api/webhooks/")
-         ))
+      )) {
         return "Must be valid Slack or Discord webhook URL";
+      }
     }
   },
   {
@@ -108,7 +109,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   }
 
   // Skip content already tracked in user's recent history
-  // Avoid repeated triggers from user editing
+  // Avoids repeated triggers caused by user editing
   const user = await getUser(object.authorName, metadata!);
   if (user.objects.includes(object.id)) {
     console.log(`${object.id} by u/${object.authorName} already tracked. Skipping.`);
@@ -124,9 +125,11 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
   const subreddit = await reddit.getSubredditById(String(event.event.subreddit?.id), metadata);
   const moderators = [];
-  for await(const moderator of subreddit.getModerators())
-    if (!excludedModsList.includes(moderator.username.toLowerCase()))
+  for await(const moderator of subreddit.getModerators()) {
+    if (!excludedModsList.includes(moderator.username.toLowerCase())) {
       moderators.push(moderator.username);
+    }
+  }
 
   if (!moderators.length) {
     console.error(`All moderators are excluded: ${excludedModsList.join(', ')}`);
@@ -153,9 +156,10 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
       console.error(`Error writing ${object.authorName} to KVStore: ${err}`);
     }
 
-    if (user.count > 1)
+    if (user.count > 1) {
       console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
                   `moderators ${user.count.toLocaleString()} times`);
+    }
 
     // Report Content
     if (reportContent) {
@@ -284,21 +288,24 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
         ]
       };
 
-      if ('title' in object)
+      if ('title' in object) {
         discordPayload.embeds[0].fields.push({
           name: "Title",
           value: object.title
         });
+      }
 
-      if (object.body)
+      if (object.body) {
         discordPayload.embeds[0].fields.push({
           name: "Body",
           value: object.body
         });
+      }
 
-      if (user.count > 1)
+      if (user.count > 1) {
         discordPayload.embeds[0].footer.text = `u/${object.authorName} has mentioned r/${subreddit.name} ` +
                                                `moderators ${user.count.toLocaleString()} times`;
+      }
 
       try {
         await fetch(webhookURL, {
@@ -330,8 +337,9 @@ async function generateLeaderboard(event: SubredditContextActionEvent, metadata?
   // Generate Top 10 table
   let table = "|**Rank**|**Username**|**Count**|\n" +
               "|--:|:--|:--|\n";
-  for (let i = 0; i < Math.min(10, leaderboard.length); i++)
+  for (let i = 0; i < Math.min(10, leaderboard.length); i++) {
     table += `|${i + 1}|u/${leaderboard[i][0]}|${leaderboard[i][1].toLocaleString()}|\n`;
+  }
 
   // Send via Modmail
   const subreddit = await reddit.getSubredditById("t5_" + String(event.subreddit.id), metadata);
@@ -355,18 +363,5 @@ async function generateLeaderboard(event: SubredditContextActionEvent, metadata?
     return { success: false, message: 'Error generating leaderboard!' };
   }
 }
-
-// Devvit.addAction({
-//   name: 'Reset KVStore',
-//   description: 'Reset KVStore',
-//   context: Context.SUBREDDIT,
-//   userContext: UserContext.MODERATOR,
-//   handler: async (_event, metadata?) => {
-//     const currentUser = await reddit.getCurrentUser(metadata);
-//     console.log(`u/${currentUser.username} reset the KVStore`);
-//     await resetKVStore(metadata!);
-//     return { success: true, message: 'KVStore Reset!' };
-//   }
-// });
 
 export default Devvit;
