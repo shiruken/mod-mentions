@@ -57,8 +57,7 @@ Devvit.addSettings([
     type: 'string',
     name: 'excludedMods',
     label: 'Exclude Moderators',
-    helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions',
-    defaultValue: "AutoModerator"
+    helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions (AutoModerator and mod-mentions app account excluded by default)'
   }
 ]);
 
@@ -119,7 +118,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   let excludedMods = await getSetting('excludedMods', metadata) as string;
   excludedMods = excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
   const excludedModsList = excludedMods.toLowerCase().split(",");
-  excludedModsList.push('mod-mentions'); // Exclude app account
+  excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
 
   // Get list of subreddit moderators, excluding any defined in configuration
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
@@ -143,13 +142,17 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
   if (index >= 0) {
 
     const moderator = moderators[index];
-    const isEdit = (event.type === Devvit.Trigger.PostUpdate) || (event.type === Devvit.Trigger.CommentUpdate);
-    console.log(`${object.id}${ isEdit ? " (edited) " : " " }mentions u/${moderator}`);
+    console.log(`${object.id} mentions u/${moderator}`);
 
     // Track object and update user in kvstore
     user.count += 1;
     user.objects.push(object.id);
-    await storeUser(object.authorName, user, metadata!);
+    try {
+      await storeUser(object.authorName, user, metadata!);
+    } catch(err) {
+      console.error(`Error writing ${object.authorName} to KVStore: ${err}`);
+    }
+
     if (user.count > 1)
       console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
                   `moderators ${user.count.toLocaleString()} times`);
@@ -164,9 +167,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           metadata
         );
-        console.log(`Reported ${object.id}${ isEdit ? " (edited)" : "" }`);  
+        console.log(`Reported ${object.id}`);  
       } catch(err) {
-        console.error(`Error reporting ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error reporting ${object.id}: ${err}`);
       }
     }
 
@@ -174,9 +177,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (lockContent) {
       try {
         await object.lock();
-        console.log(`Locked ${object.id}${ isEdit ? " (edited)" : "" }`);  
+        console.log(`Locked ${object.id}`);  
       } catch(err) {
-        console.error(`Error locking ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error locking ${object.id}: ${err}`);
       }
     }
 
@@ -184,15 +187,15 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     if (removeContent) {
       try {
         await object.remove();
-        console.log(`Removed ${object.id}${ isEdit ? " (edited)" : "" }`);  
+        console.log(`Removed ${object.id}`);  
       } catch(err) {
-        console.error(`Error removing ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error removing ${object.id}: ${err}`);
       }
     }
     
     // Send Modmail
     if (modmailContent) {
-      const text = `The moderator u/${moderator} has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}:\n\n` +
+      const text = `The moderator u/${moderator} has been mentioned in a ${type}:\n\n` +
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
@@ -209,9 +212,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           metadata
         );
-        console.log(`Sent modmail about ${object.id}${ isEdit ? " (edited)" : "" }`);
+        console.log(`Sent modmail about ${object.id}`);
       } catch(err) {
-        console.error(`Error sending modmail about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error sending modmail about ${object.id}: ${err}`);
       }
     }
 
@@ -224,7 +227,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
             text: {
               type: "mrkdwn",
               text: `The moderator <https://www.reddit.com/user/${moderator}|u/${moderator}> ` +
-                    `has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}:`
+                    `has been mentioned in a ${type}:`
             }
           },
           {
@@ -249,9 +252,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           method: 'POST',
           body: JSON.stringify(slackPayload)
         });
-        console.log(`Sent Slack message about ${object.id}${ isEdit ? " (edited)" : "" }`);
+        console.log(`Sent Slack message about ${object.id}`);
       } catch(err) {
-        console.error(`Error sending Slack message about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error sending Slack message about ${object.id}: ${err}`);
       }
     }
 
@@ -260,7 +263,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
       const discordPayload = {
         username: "Moderator Mentions",
         content: `The moderator [u/${moderator}](https://www.reddit.com/user/${moderator}) ` +
-                 `has been mentioned in ${ isEdit ? "an edited" : "a" } ${type}`,
+                 `has been mentioned in a ${type}`,
         embeds: [
           {
             color: 16711680, // #FF0000
@@ -305,9 +308,9 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
           },
           body: JSON.stringify(discordPayload)
         });
-        console.log(`Sent Discord message about ${object.id}${ isEdit ? " (edited)" : "" }`);
+        console.log(`Sent Discord message about ${object.id}`);
       } catch(err) {
-        console.error(`Error sending Discord message about ${object.id}${ isEdit ? " (edited)" : "" }: ${err}`);
+        console.error(`Error sending Discord message about ${object.id}: ${err}`);
       }
     }
   }
@@ -357,6 +360,7 @@ async function generateLeaderboard(event: SubredditContextActionEvent, metadata?
 //   name: 'Reset KVStore',
 //   description: 'Reset KVStore',
 //   context: Context.SUBREDDIT,
+//   userContext: UserContext.MODERATOR,
 //   handler: async (_event, metadata?) => {
 //     const currentUser = await reddit.getCurrentUser(metadata);
 //     console.log(`u/${currentUser.username} reset the KVStore`);
