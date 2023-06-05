@@ -52,9 +52,9 @@ export const configSettings: SettingsFormField[] = [
 /**
  * Validates webhook URL string from app configuration
  * @param event
- * @returns Returns error message string if invalid
+ * @returns If invalid, returns a string containing an error message
  */
-function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>) : void | string {
+function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>): void | string {
   if (event.value &&
       !(
         event.value?.startsWith("https://hooks.slack.com/") ||
@@ -70,7 +70,7 @@ function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>) : vo
  * @param metadata Metadata from the originating handler
  * @returns A Promise that resolves to `Settings` object
  */
-export async function getValidatedSettings(metadata?: Metadata) : Promise<Settings> {
+export async function getValidatedSettings(metadata?: Metadata): Promise<Settings> {
   const settings = await getSettings(metadata);
 
   if (!settings.reportContent && !settings.lockContent && !settings.removeContent && 

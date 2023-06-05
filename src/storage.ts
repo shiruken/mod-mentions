@@ -12,7 +12,7 @@ const kv = new KeyValueStorage();
  * @param metadata Metadata from the originating handler
  * @returns A Promise that resolves to a User object
  */
-export async function getUser(username: string, metadata: Metadata): Promise<User> {
+export async function getUser(username: string, metadata?: Metadata): Promise<User> {
   let user = await kv.get(username, metadata);
   if (user === undefined) {
     user = {
@@ -31,9 +31,10 @@ export async function getUser(username: string, metadata: Metadata): Promise<Use
  * @param metadata Metadata from the originating handler
  * @returns A promise that resolves to void
  */
-export async function storeUser(username: string, user: User, metadata: Metadata): Promise<void> {
+export async function storeUser(username: string, user: User, metadata?: Metadata): Promise<void> {
   while (user.objects.length > 50) {
-    user.objects.shift();
+    const object = user.objects.shift();
+    console.log(`Dropped ${object} from u/${username} in KVStore`);
   }
   await kv.put(username, user, metadata);
 }
@@ -43,7 +44,7 @@ export async function storeUser(username: string, user: User, metadata: Metadata
  * @param metadata Metadata from the originating handler
  * @returns A promise that resolves to a list of lists containing `[username, count]`
  */
-export async function getUsersCountSorted(metadata: Metadata): Promise<[string, number][]> {
+export async function getUsersCountSorted(metadata?: Metadata): Promise<[string, number][]> {
   const keys = await kv.list(metadata);
   const users: [string, number][] = [];
   for (const key of keys) {
