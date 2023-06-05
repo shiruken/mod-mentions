@@ -1,66 +1,18 @@
 import {
-  Devvit, RedditAPIClient, Post, Comment, getSetting, 
+  Devvit, RedditAPIClient, Post, Comment, 
   Context, SubredditContextActionEvent
 } from '@devvit/public-api';
 import { Metadata } from '@devvit/protos';
 
+import { configSettings, getValidatedSettings } from "./settings.js";
 import { getUser, storeUser, getUsersCountSorted } from "./storage.js";
 
 const reddit = new RedditAPIClient();
 const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
 Devvit.use(Devvit.Types.HTTP);
 
-Devvit.addSettings([
-  {
-    type: 'boolean',
-    name: 'reportContent',
-    label: 'Report Content',
-    helpText: 'Submit report on content that mentions a subreddit moderator',
-    defaultValue: true
-  },
-  {
-    type: 'boolean',
-    name: 'lockContent',
-    label: 'Lock Content',
-    helpText: 'Lock content that mentions a subreddit moderator',
-    defaultValue: false
-  },
-  {
-    type: 'boolean',
-    name: 'removeContent',
-    label: 'Remove Content',
-    helpText: 'Remove content that mentions a subreddit moderator',
-    defaultValue: false
-  },
-  {
-    type: 'boolean',
-    name: 'modmailContent',
-    label: 'Send Modmail',
-    helpText: 'Send modmail about content that mentions a subreddit moderator',
-    defaultValue: false
-  },
-  {
-    type: 'string',
-    name: 'webhookURL',
-    label: 'Webhook URL (Slack or Discord)',
-    helpText: 'Send notification to Slack or Discord about content that mentions a subreddit moderator',
-    defaultValue: "",
-    onValidate: (event) => {
-      if (event.value && !(
-           event.value?.startsWith("https://hooks.slack.com/") || 
-           event.value?.startsWith("https://discord.com/api/webhooks/")
-      )) {
-        return "Must be valid Slack or Discord webhook URL";
-      }
-    }
-  },
-  {
-    type: 'string',
-    name: 'excludedMods',
-    label: 'Exclude Moderators',
-    helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions (AutoModerator and mod-mentions app account excluded by default)'
-  }
-]);
+// App Configuration
+Devvit.addSettings(configSettings);
 
 Devvit.addTrigger({
   events: [
@@ -81,16 +33,7 @@ Devvit.addAction({
 
 async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metadata) {
 
-  const reportContent = await getSetting('reportContent', metadata) as boolean;
-  const lockContent = await getSetting('lockContent', metadata) as boolean;
-  const removeContent = await getSetting('removeContent', metadata) as boolean;
-  const modmailContent = await getSetting('modmailContent', metadata) as boolean;
-  const webhookURL = await getSetting('webhookURL', metadata) as string;
-
-  if (!reportContent && !lockContent && !removeContent && !modmailContent && !webhookURL) {
-    console.error('No actions are enabled in app configuration');
-    return;
-  }
+  const settings = await getValidatedSettings(metadata);
 
   let object: Post | Comment;
   let text: string;
@@ -104,8 +47,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     object = await reddit.getCommentById(String(event.event.comment?.id), metadata);
     text = object.body;
   } else {
-    console.error('Unexpected trigger type: %d', event.type);
-    return;
+    throw new Error(`Unexpected trigger type: ${event.type}`);
   }
 
   // Skip content already tracked in user's recent history
@@ -116,8 +58,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     return;
   }
 
-  let excludedMods = await getSetting('excludedMods', metadata) as string;
-  excludedMods = excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
+  const excludedMods = settings.excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
   const excludedModsList = excludedMods.toLowerCase().split(",");
   excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
 
@@ -162,7 +103,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Report Content
-    if (reportContent) {
+    if (settings.reportContent) {
       try {
         await lc.Report(
           {
@@ -178,7 +119,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Lock Content
-    if (lockContent) {
+    if (settings.lockContent) {
       try {
         await object.lock();
         console.log(`Locked ${object.id}`);  
@@ -188,7 +129,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Remove Content
-    if (removeContent) {
+    if (settings.removeContent) {
       try {
         await object.remove();
         console.log(`Removed ${object.id}`);  
@@ -198,7 +139,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
     
     // Send Modmail
-    if (modmailContent) {
+    if (settings.modmailContent) {
       const text = `The moderator u/${moderator} has been mentioned in a ${type}:\n\n` +
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
@@ -223,7 +164,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Send to Slack
-    if (webhookURL && webhookURL.startsWith("https://hooks.slack.com/")) {
+    if (settings.webhookURL && settings.webhookURL.startsWith("https://hooks.slack.com/")) {
       const slackPayload = {
         blocks: [
           {
@@ -252,7 +193,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
       };
       
       try {
-        await fetch(webhookURL, {
+        await fetch(settings.webhookURL, {
           method: 'POST',
           body: JSON.stringify(slackPayload)
         });
@@ -263,7 +204,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
     }
 
     // Send to Discord
-    if (webhookURL && webhookURL.startsWith("https://discord.com/api/webhooks/")) {
+    if (settings.webhookURL && settings.webhookURL.startsWith("https://discord.com/api/webhooks/")) {
       const discordPayload = {
         username: "Moderator Mentions",
         content: `The moderator [u/${moderator}](https://www.reddit.com/user/${moderator}) ` +
@@ -308,7 +249,7 @@ async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metad
       }
 
       try {
-        await fetch(webhookURL, {
+        await fetch(settings.webhookURL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
