@@ -65,11 +65,11 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
   // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
   text = text.toLowerCase();
   const index = moderators.findIndex(m => text.includes(`u/${m.toLowerCase()}`));
+  const moderator = moderators[index];
 
   // Execute actions and send notifications
-  if (index >= 0) {
+  if (moderator !== undefined) {
 
-    const moderator = moderators[index];
     console.log(`${object.id} mentions u/${moderator}`);
 
     // Track object and update user in kvstore
