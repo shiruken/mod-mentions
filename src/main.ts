@@ -5,7 +5,7 @@ import { checkModMention, generateLeaderboard } from './handlers.js';
 
 Devvit.addSettings(configSettings);
 
-// Check all posts and comments (including edits) for moderator mentions
+// Check all new posts and comments (including edits) for moderator mentions
 Devvit.addTrigger({
   events: [
     Devvit.Trigger.PostSubmit, Devvit.Trigger.PostUpdate,
@@ -14,7 +14,7 @@ Devvit.addTrigger({
   handler: checkModMention
 });
 
-// Generate leaderboard for users with most moderator mentions
+// Generate leaderboard of users with most moderator mentions
 Devvit.addAction({
   name: 'Mod Mentions Leaderboard',
   description: 'Get the Moderator Mentions leaderboard via Modmail',

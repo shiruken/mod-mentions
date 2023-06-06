@@ -1,18 +1,26 @@
 import { KeyValueStorage } from "@devvit/public-api";
 import { Metadata } from "@devvit/protos";
 
-import { User } from './types.js';
-
 const kv = new KeyValueStorage();
 
 /**
- * Read User object for `username` from Reddit KVStore.
+ * User
+ * @typeParam count: Total number of mod mentions by user (all time)
+ * @typeParam objects: List of recent Reddit object ids from user that mentioned mods
+ */
+export type User = {
+  count: number,
+  objects: string[]
+};
+
+/**
+ * Read {@link User} object for `username` from Reddit KVStore.
  * Creates a new User if `username` key does not already exist.
  * @param username A Reddit username
  * @param metadata Metadata from the originating handler
  * @returns A Promise that resolves to a User object
  */
-export async function getUser(username: string, metadata?: Metadata): Promise<User> {
+export async function getUserData(username: string, metadata?: Metadata): Promise<User> {
   let user = await kv.get(username, metadata);
   if (user === undefined) {
     user = {
@@ -24,14 +32,14 @@ export async function getUser(username: string, metadata?: Metadata): Promise<Us
 }
 
 /**
- * Write User object for `username` in Reddit KVStore.
- * Automatically limits `user.objects` to 50 most recent Reddit object ids.
+ * Write {@link User} object for `username` in Reddit KVStore.
+ * Automatically prunes `user.objects` to 50 most recent Reddit object ids.
  * @param username A Reddit username associated with `user`
  * @param user A User object
  * @param metadata Metadata from the originating handler
  * @returns A promise that resolves to void
  */
-export async function storeUser(username: string, user: User, metadata?: Metadata): Promise<void> {
+export async function storeUserData(username: string, user: User, metadata?: Metadata): Promise<void> {
   while (user.objects.length > 50) {
     const object = user.objects.shift();
     console.log(`Dropped ${object} from u/${username} in KVStore`);

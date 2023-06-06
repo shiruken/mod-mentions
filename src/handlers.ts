@@ -1,11 +1,11 @@
 import {
-    Comment, ContextActionResponse, Devvit, Post,
-    RedditAPIClient, SubredditContextActionEvent
+  Comment, ContextActionResponse, Devvit, Post,
+  RedditAPIClient, SubredditContextActionEvent
 } from '@devvit/public-api';
 import { Metadata } from '@devvit/protos';
 
 import { getValidatedSettings } from "./settings.js";
-import { getUser, getUsersCountSorted, storeUser } from './storage.js';
+import { getUserData, getUsersCountSorted, storeUserData } from './storage.js';
 
 Devvit.use(Devvit.Types.HTTP);
 
@@ -15,6 +15,9 @@ const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
 /**
  * Checks content for moderator mentions and performs actions and 
  * sends notifications according to installation's app settings
+ * @param event
+ * @param metadata Metadata from the originating handler
+ * @returns A promise that resolves to void
  */
 export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metadata): Promise<void> {
   const settings = await getValidatedSettings(metadata);
@@ -36,7 +39,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
 
   // Skip content already tracked in user's recent history
   // Avoids repeated triggers caused by user editing
-  const user = await getUser(object.authorName, metadata);
+  const user = await getUserData(object.authorName, metadata);
   if (user.objects.includes(object.id)) {
     console.log(`${object.id} by u/${object.authorName} already tracked. Skipping.`);
     return;
@@ -49,7 +52,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
   // Get list of subreddit moderators, excluding any defined in configuration
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
   const subreddit = await reddit.getSubredditById(String(event.event.subreddit?.id), metadata);
-  const moderators = [];
+  const moderators: string[] = [];
   for await(const moderator of subreddit.getModerators()) {
     if (!excludedModsList.includes(moderator.username.toLowerCase())) {
       moderators.push(moderator.username);
@@ -74,7 +77,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
     // Track object and update user in KVStore
     user.count += 1;
     user.objects.push(object.id);
-    await storeUser(object.authorName, user, metadata);
+    await storeUserData(object.authorName, user, metadata);
 
     if (user.count > 1) {
       console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
@@ -246,6 +249,9 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
 /**
  * Generates leaderboard for users with most moderator mentions
  * and sends message to subreddit via Modmail
+ * @param event
+ * @param metadata Metadata from the originating handler
+ * @returns A promise that resolves to a ContextActionResponse
  */
 export async function generateLeaderboard(event: SubredditContextActionEvent, metadata?: Metadata): Promise<ContextActionResponse> {
   const currentUser = await reddit.getCurrentUser(metadata);

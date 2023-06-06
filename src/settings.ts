@@ -2,7 +2,23 @@ import { getSettings } from "@devvit/public-api";
 import { SettingsFormField, SettingsFormFieldValidatorEvent } from "@devvit/public-api/settings/types.js";
 import { Metadata } from "@devvit/protos";
 
-import { Settings } from './types.js';
+/**
+ * Settings
+ * @typeParam reportContent: Enable content reporting
+ * @typeParam lockContent: Enable content locking
+ * @typeParam removeContent: Enable content removal
+ * @typeParam modmailContent: Enable modmail notification
+ * @typeParam webhookURL: Slack or Discord webhook URL
+ * @typeParam excludedMods: Moderators excluded from actions and notifications
+ */
+export type Settings = {
+  reportContent: boolean,
+  lockContent: boolean,
+  removeContent: boolean,
+  modmailContent: boolean,
+  webhookURL: string,
+  excludedMods: string
+};
 
 export const configSettings: SettingsFormField[] = [
   {
@@ -31,7 +47,7 @@ export const configSettings: SettingsFormField[] = [
     name: 'modmailContent',
     label: 'Send Modmail',
     helpText: 'Send modmail about content that mentions a subreddit moderator',
-    defaultValue: false
+    defaultValue: true
   },
   {
     type: 'string',
@@ -45,14 +61,15 @@ export const configSettings: SettingsFormField[] = [
     type: 'string',
     name: 'excludedMods',
     label: 'Exclude Moderators',
-    helpText: 'Comma-separated list of subreddit moderators to exclude from notifications and actions (AutoModerator and mod-mentions app account excluded by default)'
+    helpText: 'Comma-separated list of subreddit moderators to exclude from actions and notifications (AutoModerator and mod-mentions excluded by default)',
+    defaultValue: "",
   }
 ];
 
 /**
  * Validates webhook URL string from app configuration
  * @param event
- * @returns If invalid, returns a string containing an error message
+ * @returns Returns a string containing an error message if invalid
  */
 function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>): void | string {
   if (event.value &&
@@ -68,7 +85,7 @@ function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>): voi
 /**
  * Load, validate, and return current app configuration settings 
  * @param metadata Metadata from the originating handler
- * @returns A Promise that resolves to `Settings` object
+ * @returns A Promise that resolves to a {@link Settings} object
  */
 export async function getValidatedSettings(metadata?: Metadata): Promise<Settings> {
   const settings = await getSettings(metadata) as Settings;
