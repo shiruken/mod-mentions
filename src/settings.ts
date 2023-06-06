@@ -71,7 +71,7 @@ function validateWebhookURL(event: SettingsFormFieldValidatorEvent<string>): voi
  * @returns A Promise that resolves to `Settings` object
  */
 export async function getValidatedSettings(metadata?: Metadata): Promise<Settings> {
-  const settings = await getSettings(metadata);
+  const settings = await getSettings(metadata) as Settings;
 
   if (!settings.reportContent && !settings.lockContent && !settings.removeContent && 
       !settings.modmailContent && !settings.webhookURL)
@@ -79,5 +79,5 @@ export async function getValidatedSettings(metadata?: Metadata): Promise<Setting
     throw new Error('No actions are enabled in app configuration');
   }
 
-  return settings as Settings;
+  return settings;
 }

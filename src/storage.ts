@@ -36,7 +36,11 @@ export async function storeUser(username: string, user: User, metadata?: Metadat
     const object = user.objects.shift();
     console.log(`Dropped ${object} from u/${username} in KVStore`);
   }
-  await kv.put(username, user, metadata);
+  try {
+    await kv.put(username, user, metadata);
+  } catch(err) {
+    console.error(`Error writing u/${username} to KVStore: ${err}`);
+  }
 }
 
 /**

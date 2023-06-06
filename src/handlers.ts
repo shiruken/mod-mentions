@@ -57,8 +57,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
   }
 
   if (!moderators.length) {
-    console.error(`All moderators are excluded: ${excludedModsList.join(', ')}`);
-    return;
+    throw new Error(`All moderators are excluded: ${excludedModsList.join(', ')}`);
   }
 
   // Check if any subreddit moderators are mentioned
@@ -72,14 +71,10 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
 
     console.log(`${object.id} mentions u/${moderator}`);
 
-    // Track object and update user in kvstore
+    // Track object and update user in KVStore
     user.count += 1;
     user.objects.push(object.id);
-    try {
-      await storeUser(object.authorName, user, metadata!);
-    } catch(err) {
-      console.error(`Error writing ${object.authorName} to KVStore: ${err}`);
-    }
+    await storeUser(object.authorName, user, metadata);
 
     if (user.count > 1) {
       console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
