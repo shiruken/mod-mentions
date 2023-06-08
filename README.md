@@ -16,4 +16,4 @@ https://developers.reddit.com/r/shiruken/apps/mod-mentions
 
 ## Configuration
 
-![Screenshot of App Configuration](https://github.com/shiruken/mod-mentions/assets/867617/dc0b8fa7-6056-470d-a39b-994a52a4dcbd)
+![Screenshot of App Configuration](https://github.com/shiruken/mod-mentions/assets/867617/678cb678-c135-4cfc-8ab5-d0f0532682de)
