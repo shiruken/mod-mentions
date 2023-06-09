@@ -26,35 +26,35 @@ export const configSettings: SettingsFormField[] = [
     name: 'reportContent',
     label: 'Report Content',
     helpText: 'Submit report on content that mentions a subreddit moderator',
-    defaultValue: true
+    // defaultValue: true
   },
   {
     type: 'boolean',
     name: 'lockContent',
     label: 'Lock Content',
     helpText: 'Lock content that mentions a subreddit moderator',
-    defaultValue: false
+    // defaultValue: false
   },
   {
     type: 'boolean',
     name: 'removeContent',
     label: 'Remove Content',
     helpText: 'Remove content that mentions a subreddit moderator',
-    defaultValue: false
+    // defaultValue: false
   },
   {
     type: 'boolean',
     name: 'modmailContent',
     label: 'Send Modmail',
     helpText: 'Send modmail about content that mentions a subreddit moderator',
-    defaultValue: true
+    // defaultValue: true
   },
   {
     type: 'string',
     name: 'webhookURL',
     label: 'Webhook URL (Slack or Discord)',
     helpText: 'Enter webhook URL to send notification to Slack or Discord about content that mentions a subreddit moderator',
-    defaultValue: "",
+    // defaultValue: "",
     onValidate: validateWebhookURL
   },
   {
@@ -62,7 +62,7 @@ export const configSettings: SettingsFormField[] = [
     name: 'excludedMods',
     label: 'Exclude Moderators',
     helpText: 'Comma-separated list of subreddit moderators to exclude from actions and notifications (AutoModerator and mod-mentions excluded by default)',
-    defaultValue: "",
+    // defaultValue: "",
   }
 ];
 
