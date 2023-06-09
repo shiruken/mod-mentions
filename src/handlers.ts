@@ -53,10 +53,14 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
   const subreddit = await reddit.getSubredditById(String(event.event.subreddit?.id), metadata);
   const moderators: string[] = [];
-  for await(const moderator of subreddit.getModerators()) {
-    if (!excludedModsList.includes(moderator.username.toLowerCase())) {
-      moderators.push(moderator.username);
+  try {
+    for await(const moderator of subreddit.getModerators()) {
+      if (!excludedModsList.includes(moderator.username.toLowerCase())) {
+        moderators.push(moderator.username);
+      }
     }
+  } catch(err) {
+    throw new Error(`Error fetching modlist for ${subreddit.name}: ${err}`);
   }
 
   if (!moderators.length) {
