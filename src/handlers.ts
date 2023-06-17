@@ -37,6 +37,11 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
     throw new Error(`Unexpected trigger type: ${event.type}`);
   }
 
+  // Ignore content from AutoModerator
+  if (object.authorName == "AutoModerator") {
+    return;
+  }
+
   // Skip content already tracked in user's recent history
   // Avoids repeated triggers caused by user editing
   const user = await getUserData(object.authorName, metadata);
