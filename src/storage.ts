@@ -1,7 +1,4 @@
-import { KeyValueStorage } from "@devvit/public-api";
-import { Metadata } from "@devvit/protos";
-
-const kv = new KeyValueStorage();
+import { Context, TriggerContext } from "@devvit/public-api";
 
 /**
  * User
@@ -14,55 +11,55 @@ export type User = {
 };
 
 /**
- * Read {@link User} object for `username` from Reddit KVStore.
- * Creates a new User if `username` key does not already exist.
+ * Read {@link User} object for `username` from Redis.
+ * Creates a new User if `username` does not already exist.
  * @param username A Reddit username
- * @param metadata Metadata from the originating handler
- * @returns A Promise that resolves to a User object
+ * @param context A TriggerContext object
+ * @returns A Promise that resolves to a {@link User} object
  */
-export async function getUserData(username: string, metadata?: Metadata): Promise<User> {
-  let user = await kv.get(username, metadata);
-  if (user === undefined) {
-    user = {
-      count: 0,
-      objects: []
-    };
+export async function getUserData(username: string, context: TriggerContext): Promise<User> {
+  const value = await context.redis.get(username);
+  let user: User;
+  if (value === undefined) {
+    user = { count: 0, objects: [] };
+  } else {
+    user = JSON.parse(value);
   }
-  return user as User;
+  return user;
 }
 
 /**
- * Write {@link User} object for `username` in Reddit KVStore.
+ * Write {@link User} object for `username` in Redis.
  * Automatically prunes `user.objects` to 50 most recent Reddit object ids.
  * @param username A Reddit username associated with `user`
- * @param user A User object
- * @param metadata Metadata from the originating handler
- * @returns A promise that resolves to void
+ * @param user A {@link User} object
+ * @param context A TriggerContext object
  */
-export async function storeUserData(username: string, user: User, metadata?: Metadata): Promise<void> {
+export async function storeUserData(username: string, user: User, context: TriggerContext) {
   while (user.objects.length > 50) {
     const object = user.objects.shift();
-    console.log(`Dropped ${object} from u/${username} in KVStore`);
+    console.log(`Dropped ${object} from u/${username} in Redis`);
   }
   try {
-    await kv.put(username, user, metadata);
+    await context.redis.set(username, JSON.stringify(user));
   } catch(err) {
-    console.error(`Error writing u/${username} to KVStore: ${err}`);
+    console.error(`Error writing u/${username} to Redis: ${err}`);
   }
 }
 
 /**
- * Get list of all usernames and associated counts from Reddit KVStore sorted by count descending
- * @param metadata Metadata from the originating handler
+ * Get list of all usernames and associated counts from Redis sorted by count descending
+ * @param context A Context object
  * @returns A promise that resolves to a list of lists containing `[username, count]`
  */
-export async function getUsersCountSorted(metadata?: Metadata): Promise<[string, number][]> {
-  const keys = await kv.list(metadata);
-  const users: [string, number][] = [];
-  for (const key of keys) {
-    const user = await kv.get(key, metadata) as User;
-    users.push([key, user.count]);
-  }
-  users.sort((a, b) => b[1] - a[1]);
-  return users;
+export async function getUsersCountSorted(context: Context): Promise<[string, number][]> {
+  const keys = await context.kvStore.list(); // No equivalent command exists for Redis plugin
+  const users = await context.redis.mget(keys);
+  const counts: [string, number][] = [];
+  keys.forEach((key, index) => {
+    const user: User = JSON.parse(String(users[index]));
+    counts.push([key, user.count]);
+  });
+  counts.sort((a, b) => b[1] - a[1]);
+  return counts;
 }

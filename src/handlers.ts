@@ -1,71 +1,67 @@
-import {
-  Comment, ContextActionResponse, Devvit, Post,
-  RedditAPIClient, SubredditContextActionEvent
-} from '@devvit/public-api';
-import { Metadata } from '@devvit/protos';
-
-import { getValidatedSettings } from "./settings.js";
+import { Comment, Context, MenuItemOnPressEvent, OnTriggerEvent, Post, TriggerContext } from '@devvit/public-api';
+import { CommentSubmit, CommentUpdate, PostSubmit, PostUpdate } from '@devvit/protos';
+import { getValidatedSettings } from './settings.js';
 import { getUserData, getUsersCountSorted, storeUserData } from './storage.js';
-
-Devvit.use(Devvit.Types.HTTP);
-
-const reddit = new RedditAPIClient();
-const lc = Devvit.use(Devvit.Types.RedditAPI.LinksAndComments);
 
 /**
  * Checks content for moderator mentions and performs actions and 
  * sends notifications according to installation's app settings
- * @param event
- * @param metadata Metadata from the originating handler
- * @returns A promise that resolves to void
+ * @param event A TriggerEvent object
+ * @param context A TriggerContext object
  */
-export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?: Metadata): Promise<void> {
-  const settings = await getValidatedSettings(metadata);
+export async function checkModMention(event: OnTriggerEvent<any>, context: TriggerContext) {
+  const authorName = event.author?.name;
+  const subredditName = event.subreddit?.name;
+
+  if (!authorName || !subredditName) {
+    throw new Error(`Missing authorName (${authorName ?? ""}) or subredditName (${subredditName ?? ""}) in checkModMention`);
+  }
+
+  // Ignore content from AutoModerator
+  if (authorName == "AutoModerator") {
+    return;
+  }
+
+  const settings = await getValidatedSettings(context);
+  const { reddit } = context;
 
   let object: Post | Comment;
   let text: string;
   let type: string;
-  if (event.type === Devvit.Trigger.PostSubmit || event.type === Devvit.Trigger.PostUpdate) {
+  if (event.type === 'PostSubmit' || event.type === 'PostUpdate') {
     type = "post";
-    object = await reddit.getPostById(String(event.event.post?.id), metadata);
+    object = await reddit.getPostById(event.post?.id);
     text = object.title + " " + String(object.body);
-  } else if (event.type === Devvit.Trigger.CommentSubmit || event.type === Devvit.Trigger.CommentUpdate) {
+  } else if (event.type === 'CommentSubmit' || event.type === 'CommentUpdate') {
     type = "comment";
-    object = await reddit.getCommentById(String(event.event.comment?.id), metadata);
+    object = await reddit.getCommentById(event.comment?.id);
     text = object.body;
   } else {
     throw new Error(`Unexpected trigger type: ${event.type}`);
   }
 
-  // Ignore content from AutoModerator
-  if (object.authorName == "AutoModerator") {
-    return;
-  }
-
   // Skip content already tracked in user's recent history
   // Avoids repeated triggers caused by user editing
-  const user = await getUserData(object.authorName, metadata);
+  const user = await getUserData(authorName, context);
   if (user.objects.includes(object.id)) {
-    console.log(`${object.id} by u/${object.authorName} already tracked. Skipping.`);
+    console.log(`${object.id} by u/${authorName} already tracked. Skipping.`);
     return;
   }
 
   const excludedMods = settings.excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
-  const excludedModsList = excludedMods.toLowerCase().split(",");
+  const excludedModsList = (excludedMods == "") ? [] : excludedMods.toLowerCase().split(",");
   excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
 
   // Get list of subreddit moderators, excluding any defined in configuration
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
-  const subreddit = await reddit.getSubredditById(String(event.event.subreddit?.id), metadata);
   const moderators: string[] = [];
   try {
-    for await(const moderator of subreddit.getModerators()) {
+    for await(const moderator of reddit.getModerators({ subredditName: subredditName }))
       if (!excludedModsList.includes(moderator.username.toLowerCase())) {
         moderators.push(moderator.username);
       }
-    }
-  } catch(err) {
-    throw new Error(`Error fetching modlist for ${subreddit.name}: ${err}`);
+  } catch (err) {
+    throw new Error(`Error fetching modlist for r/${subredditName}: ${err}`);
   }
 
   if (!moderators.length) {
@@ -83,26 +79,22 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
 
     console.log(`${object.id} mentions u/${moderator}`);
 
-    // Track object and update user in KVStore
+    // Track object and update user in Redis
     user.count += 1;
     user.objects.push(object.id);
-    await storeUserData(object.authorName, user, metadata);
+    await storeUserData(authorName, user, context);
 
     if (user.count > 1) {
-      console.log(`u/${object.authorName} has mentioned r/${subreddit.name} ` +
+      console.log(`u/${authorName} has mentioned r/${subredditName} ` +
                   `moderators ${user.count.toLocaleString()} times`);
     }
 
     // Report Content
     if (settings.reportContent) {
       try {
-        await lc.Report(
-          {
-            thingId: object.id,
-            reason: `Mentions moderator u/${moderator}`
-          },
-          metadata
-        );
+        await reddit.report(object, {
+          reason: `Mentions moderator u/${moderator}`,
+        });
         console.log(`Reported ${object.id}`);  
       } catch(err) {
         console.error(`Error reporting ${object.id}: ${err}`);
@@ -133,21 +125,18 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
     if (settings.modmailContent) {
       const text = `The moderator u/${moderator} has been mentioned in a ${type}:\n\n` +
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
-                   `* **User:** u/${object.authorName}` +
+                   `* **User:** u/${authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
                    ((object.body) ? `\n\n* **Body:** ${object.body}` : "") +
-                   ((user.count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${subreddit.name} ` + 
+                   ((user.count > 1) ? `\n\n^(u/${authorName} has mentioned r/${subredditName} ` + 
                                        `moderators ${user.count.toLocaleString()} times)` : "");
 
       try {
-        await reddit.sendPrivateMessage(
-          {
-            to: `/r/${subreddit.name}`,
-            subject: "Moderator Mentioned",
-            text: text,
-          },
-          metadata
-        );
+        await reddit.sendPrivateMessage({
+          to: `/r/${subredditName}`,
+          subject: "Moderator Mentioned",
+          text: text,
+        });
         console.log(`Sent modmail about ${object.id}`);
       } catch(err) {
         console.error(`Error sending modmail about ${object.id}: ${err}`);
@@ -172,10 +161,10 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
               {
                 type: "mrkdwn",
                 text: `https://www.reddit.com${object.permalink}\n` +
-                      `*User:* <https://www.reddit.com/user/${object.authorName}|u/${object.authorName}>` +
+                      `*User:* <https://www.reddit.com/user/${authorName}|u/${authorName}>` +
                       (('title' in object) ? `\n*Title:* ${object.title}` : "") +
                       ((object.body) ? `\n*Body:* ${object.body}` : "") +
-                      ((user.count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${subreddit.name} ` +
+                      ((user.count > 1) ? `\n\n_u/${authorName} has mentioned r/${subredditName} ` +
                                           `moderators ${user.count.toLocaleString()} times_` : "")
               }
             ]
@@ -210,7 +199,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
               },
               {
                 name: "User",
-                value: `[u/${object.authorName}](https://www.reddit.com/user/${object.authorName})`
+                value: `[u/${authorName}](https://www.reddit.com/user/${authorName})`
               }
             ],
             footer: {
@@ -235,7 +224,7 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
       }
 
       if (user.count > 1) {
-        discordPayload.embeds[0].footer.text = `u/${object.authorName} has mentioned r/${subreddit.name} ` +
+        discordPayload.embeds[0].footer.text = `u/${authorName} has mentioned r/${subredditName} ` +
                                                `moderators ${user.count.toLocaleString()} times`;
       }
 
@@ -258,20 +247,25 @@ export async function checkModMention(event: Devvit.MultiTriggerEvent, metadata?
 /**
  * Generates leaderboard for users with most moderator mentions
  * and sends message to subreddit via Modmail
- * @param event
- * @param metadata Metadata from the originating handler
- * @returns A promise that resolves to a ContextActionResponse
+ * @param event A TriggerEvent object
+ * @param context A Context object
  */
-export async function generateLeaderboard(event: SubredditContextActionEvent, metadata?: Metadata): Promise<ContextActionResponse> {
-  const currentUser = await reddit.getCurrentUser(metadata);
+export async function generateLeaderboard(event: MenuItemOnPressEvent, context: Context) {
+  const { reddit } = context;  
+  const currentUser = await reddit.getCurrentUser();
   console.log(`u/${currentUser.username} requested the leaderboard`);
 
-  const leaderboard = await getUsersCountSorted(metadata);
+  const subredditID = event.targetId;
+
+  const leaderboard = await getUsersCountSorted(context);
   if (!leaderboard.length) {
     console.error(`Unable to generate leaderboard. No users tracked yet.`);
-    return { success: false, message: 'No users tracked yet, unable to generate leaderboard!' };
+    context.ui.showToast({
+      appearance: 'neutral',
+      text: 'No users tracked yet, unable to generate leaderboard!'
+    });
   }
-  
+
   // Generate Top 10 table
   let table = "|**Rank**|**Username**|**Count**|\n" +
               "|--:|:--|:--|\n";
@@ -280,24 +274,27 @@ export async function generateLeaderboard(event: SubredditContextActionEvent, me
   }
 
   // Send via Modmail
-  const subreddit = await reddit.getSubredditById("t5_" + String(event.subreddit.id), metadata);
-  const text = `###### Most Moderator Mentions in r/${subreddit.name}\n\n` +
+  const subredditName = (await reddit.getSubredditById(subredditID)).name;
+  const text = `###### Most Moderator Mentions in r/${subredditName}\n\n` +
                `${table}\n` +
-               `^(Tracking ${leaderboard.length.toLocaleString()} users in r/${subreddit.name}. ` +
+               `^(Tracking ${leaderboard.length.toLocaleString()} users in r/${subredditName}. ` +
                `Generated by) [^Moderator ^Mentions.](https://developers.reddit.com/apps/mod-mentions)`;
 
   try {
-    await reddit.sendPrivateMessage(
-      {
-        to: `/r/${subreddit.name}`,
-        subject: "Moderator Mentions Leaderboard",
-        text: text,
-      },
-      metadata
-    );
-    return { success: true, message: 'Check Modmail for the leaderboard!' };
+    await reddit.sendPrivateMessage({
+      to: `/r/${subredditName}`,
+      subject: "Moderator Mentions Leaderboard",
+      text: text
+    });
+    context.ui.showToast({
+      appearance: 'success',
+      text: 'Check Modmail for the leaderboard!'
+    });
   } catch(err) {
     console.error(`Error sending leaderboard modmail: ${err}`);
-    return { success: false, message: 'Error generating leaderboard!' };
+    context.ui.showToast({
+      appearance: 'neutral', // No error appearance yet
+      text: 'Error generating leaderboard!'
+    });
   }
 }
