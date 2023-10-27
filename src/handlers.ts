@@ -56,10 +56,11 @@ export async function checkModMention(event: OnTriggerEvent<any>, context: Trigg
   // Has trouble on subreddits with a large number of moderators (e.g. r/science)
   const moderators: string[] = [];
   try {
-    for await(const moderator of reddit.getModerators({ subredditName: subredditName }))
+    for await(const moderator of reddit.getModerators({ subredditName: subredditName })) {
       if (!excludedModsList.includes(moderator.username.toLowerCase())) {
         moderators.push(moderator.username);
       }
+    }
   } catch (err) {
     throw new Error(`Error fetching modlist for r/${subredditName}: ${err}`);
   }
@@ -91,34 +92,26 @@ export async function checkModMention(event: OnTriggerEvent<any>, context: Trigg
 
     // Report Content
     if (settings.reportContent) {
-      try {
-        await reddit.report(object, {
-          reason: `Mentions moderator u/${moderator}`,
-        });
-        console.log(`Reported ${object.id}`);  
-      } catch(err) {
-        console.error(`Error reporting ${object.id}: ${err}`);
-      }
+      await reddit
+        .report(object, { reason: `Mentions moderator u/${moderator}` })
+        .then(() => console.log(`Reported ${object.id}`))
+        .catch((e) => console.error(`Error reporting ${object.id}`, e));
     }
 
     // Lock Content
     if (settings.lockContent) {
-      try {
-        await object.lock();
-        console.log(`Locked ${object.id}`);  
-      } catch(err) {
-        console.error(`Error locking ${object.id}: ${err}`);
-      }
+      await object
+        .lock()
+        .then(() => console.log(`Locked ${object.id}`))
+        .catch((e) => console.error(`Error locking ${object.id}`, e));
     }
 
     // Remove Content
     if (settings.removeContent) {
-      try {
-        await object.remove();
-        console.log(`Removed ${object.id}`);  
-      } catch(err) {
-        console.error(`Error removing ${object.id}: ${err}`);
-      }
+      await object
+        .remove()
+        .then(() => console.log(`Removed ${object.id}`))
+        .catch((e) => console.error(`Error removing ${object.id}`, e));
     }
     
     // Send Modmail
@@ -131,16 +124,14 @@ export async function checkModMention(event: OnTriggerEvent<any>, context: Trigg
                    ((user.count > 1) ? `\n\n^(u/${authorName} has mentioned r/${subredditName} ` + 
                                        `moderators ${user.count.toLocaleString()} times)` : "");
 
-      try {
-        await reddit.sendPrivateMessage({
+      await reddit
+        .sendPrivateMessage({
           to: `/r/${subredditName}`,
-          subject: "Moderator Mentioned",
+          subject: 'Moderator Mentioned',
           text: text,
-        });
-        console.log(`Sent modmail about ${object.id}`);
-      } catch(err) {
-        console.error(`Error sending modmail about ${object.id}: ${err}`);
-      }
+        })
+        .then(() => console.log(`Sent modmail about ${object.id}`))
+        .catch((e) => console.error(`Error sending modmail about ${object.id}`, e));
     }
 
     // Send to Slack
@@ -171,16 +162,13 @@ export async function checkModMention(event: OnTriggerEvent<any>, context: Trigg
           }
         ]
       };
-      
-      try {
-        await fetch(settings.webhookURL, {
-          method: 'POST',
-          body: JSON.stringify(slackPayload)
-        });
-        console.log(`Sent Slack message about ${object.id}`);
-      } catch(err) {
-        console.error(`Error sending Slack message about ${object.id}: ${err}`);
-      }
+
+      await fetch(settings.webhookURL, {
+        method: 'POST',
+        body: JSON.stringify(slackPayload),
+      })
+        .then(() => console.log(`Sent Slack message about ${object.id}`))
+        .catch((e) => console.error(`Error sending Slack message about ${object.id}`, e));
     }
 
     // Send to Discord
@@ -228,18 +216,15 @@ export async function checkModMention(event: OnTriggerEvent<any>, context: Trigg
                                                `moderators ${user.count.toLocaleString()} times`;
       }
 
-      try {
-        await fetch(settings.webhookURL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(discordPayload)
-        });
-        console.log(`Sent Discord message about ${object.id}`);
-      } catch(err) {
-        console.error(`Error sending Discord message about ${object.id}: ${err}`);
-      }
+      await fetch(settings.webhookURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(discordPayload),
+      })
+        .then(() => console.log(`Sent Discord message about ${object.id}`))
+        .catch((e) => console.error(`Error sending Discord message about ${object.id}`, e));
     }
   }
 }
@@ -259,10 +244,10 @@ export async function generateLeaderboard(event: MenuItemOnPressEvent, context: 
 
   const leaderboard = await getUsersCountSorted(context);
   if (!leaderboard.length) {
-    console.error(`Unable to generate leaderboard. No users tracked yet.`);
+    console.error('Unable to generate leaderboard. No users tracked yet.');
     context.ui.showToast({
-      appearance: 'neutral',
-      text: 'No users tracked yet, unable to generate leaderboard!'
+      appearance: "neutral",
+      text: "No users tracked yet, unable to generate leaderboard!",
     });
   }
 
@@ -274,27 +259,30 @@ export async function generateLeaderboard(event: MenuItemOnPressEvent, context: 
   }
 
   // Send via Modmail
-  const subredditName = (await reddit.getSubredditById(subredditID)).name;
-  const text = `###### Most Moderator Mentions in r/${subredditName}\n\n` +
+  const subreddit = await reddit.getSubredditById(subredditID);
+  const text = `###### Most Moderator Mentions in r/${subreddit.name}\n\n` +
                `${table}\n` +
-               `^(Tracking ${leaderboard.length.toLocaleString()} users in r/${subredditName}. ` +
+               `^(Tracking ${leaderboard.length.toLocaleString()} users in r/${subreddit.name}. ` +
                `Generated by) [^Moderator ^Mentions.](https://developers.reddit.com/apps/mod-mentions)`;
 
-  try {
-    await reddit.sendPrivateMessage({
-      to: `/r/${subredditName}`,
+  await reddit
+    .sendPrivateMessage({
+      to: `/r/${subreddit.name}`,
       subject: "Moderator Mentions Leaderboard",
-      text: text
-    });
-    context.ui.showToast({
-      appearance: 'success',
-      text: 'Check Modmail for the leaderboard!'
-    });
-  } catch(err) {
-    console.error(`Error sending leaderboard modmail: ${err}`);
-    context.ui.showToast({
-      appearance: 'neutral', // No error appearance yet
-      text: 'Error generating leaderboard!'
-    });
-  }
+      text: text,
+    })
+    .then(() => {
+      console.log('Sent modmail with leaderboard');
+      context.ui.showToast({
+        appearance: 'success',
+        text: 'Check Modmail for the leaderboard!',
+      });    
+    })
+    .catch((e) => {
+      console.error("Error sending leaderboard modmail", e);
+      context.ui.showToast({
+        appearance: 'neutral', // No error appearance yet
+        text: 'Error generating leaderboard!',
+      });
+    }); 
 }

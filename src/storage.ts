@@ -40,11 +40,9 @@ export async function storeUserData(username: string, user: User, context: Trigg
     const object = user.objects.shift();
     console.log(`Dropped ${object} from u/${username} in Redis`);
   }
-  try {
-    await context.redis.set(username, JSON.stringify(user));
-  } catch(err) {
-    console.error(`Error writing u/${username} to Redis: ${err}`);
-  }
+  await context.redis
+    .set(username, JSON.stringify(user))
+    .catch((e) => console.error(`Error writing u/${username} to Redis`, e));
 }
 
 /**
