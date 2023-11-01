@@ -20,7 +20,7 @@ export type User = {
 export async function getUserData(username: string, context: TriggerContext): Promise<User> {
   const value = await context.redis.get(username);
   let user: User;
-  if (value === undefined) {
+  if (!value) {
     user = { count: 0, objects: [] };
   } else {
     user = JSON.parse(value);
