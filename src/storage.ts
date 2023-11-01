@@ -46,18 +46,46 @@ export async function storeUserData(username: string, user: User, context: Trigg
 }
 
 /**
- * Get list of all usernames and associated counts from Redis sorted by count descending
+ * Get array of all usernames and associated counts from Redis sorted by count descending
  * @param context A Context object
- * @returns A promise that resolves to a list of lists containing `[username, count]`
+ * @returns A promise that resolves to a array of arrays containing `[username, count]`
  */
 export async function getUsersCountSorted(context: Context): Promise<[string, number][]> {
   const keys = await context.kvStore.list(); // No equivalent command exists for Redis plugin
   const users = await context.redis.mget(keys);
   const counts: [string, number][] = [];
   keys.forEach((key, index) => {
+    if (key === "$mods") {
+      return;
+    }
     const user: User = JSON.parse(String(users[index]));
     counts.push([key, user.count]);
   });
   counts.sort((a, b) => b[1] - a[1]);
   return counts;
+}
+
+/**
+ * Get array of cached moderator usernames from Redis
+ * @param context A TriggerContext object
+ * @returns A promise that resolves to an array of moderator usernames
+ */
+export async function getModerators(context: TriggerContext): Promise<string[] | undefined> {
+  const moderators = await context.redis.get("$mods");
+  if (moderators === undefined || moderators === "") {
+    return undefined;
+  }
+  return moderators.split(",");
+}
+
+/**
+ * Write array of moderator usernames in Redis
+ * @param moderators Array of moderator usernames
+ * @param context A TriggerContext object
+ */
+export async function storeModerators(moderators: string[], context: TriggerContext) {
+  await context.redis
+    .set("$mods", moderators.toString())
+    .then(() => console.log(`Wrote ${moderators.length} moderators to Redis`))
+    .catch((e) => console.error('Error writing moderators to Redis', e));
 }
