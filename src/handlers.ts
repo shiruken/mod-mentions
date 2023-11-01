@@ -317,11 +317,14 @@ export async function generateLeaderboard(_event: MenuItemOnPressEvent, context:
 
 /**
  * Cache modlist during app install or upgrade
- * @param _event An OnTriggerEvent object
+ * @param event An OnTriggerEvent object
  * @param context A TriggerContext object
  */
-export async function onAppChanged(_event: OnTriggerEvent<AppInstall | AppUpgrade>, context: TriggerContext) {
-  refreshModerators(context);
+export async function onAppChanged(event: OnTriggerEvent<AppInstall | AppUpgrade>, context: TriggerContext) {
+  await context.redis
+    .del("$mods")
+    .then(() => console.log(`Cleared cached modlist on ${event.type}`));
+  await refreshModerators(context);
 }
 
 /**
@@ -336,7 +339,10 @@ export async function onModAction(event: OnTriggerEvent<ModAction>, context: Tri
   }
   const actions = ['acceptmoderatorinvite', 'addmoderator', 'removemoderator', 'reordermoderators'];
   if (actions.includes(action)) {
-    refreshModerators(context);
+    await context.redis
+      .del("$mods")
+      .then(() => console.log(`Cleared cached modlist on ${action}`));
+    await refreshModerators(context);
   }
 }
 

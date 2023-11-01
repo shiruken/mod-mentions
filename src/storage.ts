@@ -72,7 +72,7 @@ export async function getUsersCountSorted(context: Context): Promise<[string, nu
  */
 export async function getModerators(context: TriggerContext): Promise<string[] | undefined> {
   const moderators = await context.redis.get("$mods");
-  if (moderators === undefined || moderators === "") {
+  if (!moderators) {
     return undefined;
   }
   return moderators.split(",");
