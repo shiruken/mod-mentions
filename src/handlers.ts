@@ -354,7 +354,7 @@ async function refreshModerators(context: Context | TriggerContext) {
   const subreddit = await context.reddit.getCurrentSubreddit();
   const moderators: string[] = [];
   try {
-    for await(const moderator of subreddit.getModerators()) {
+    for await(const moderator of subreddit.getModerators({ pageSize: 500 })) {
       moderators.push(moderator.username);
     }
   } catch (err) {
