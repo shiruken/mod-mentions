@@ -323,8 +323,25 @@ export async function generateLeaderboard(_event: MenuItemOnPressEvent, context:
  */
 export async function onAppChanged(event: OnTriggerEvent<AppInstall | AppUpgrade>, context: TriggerContext) {
   await context.redis
-    .del("$mods")
+    .del("mods")
     .then(() => console.log(`Cleared cached modlist on ${event.type}`));
+  
+  // Migrate existing KV Store data to Redis 'user' hash
+  const keys = await context.kvStore.list();
+  keys.forEach(async key => {
+    if (key === "users" || key === "mods") {
+      return;
+    }
+    if (key != "$mods") {
+      console.log(`Migrating KVStore data for u/${key} to Redis 'user' hash`);
+      const value = await context.redis.get(key);
+      if (value) {
+        await context.redis.hset("users", {[key]: value});
+      }
+    }
+    await context.kvStore.delete(key);
+  });
+
   await refreshModerators(context);
 }
 
@@ -341,7 +358,7 @@ export async function onModAction(event: OnTriggerEvent<ModAction>, context: Tri
   const actions = ['acceptmoderatorinvite', 'addmoderator', 'removemoderator', 'reordermoderators'];
   if (actions.includes(action)) {
     await context.redis
-      .del("$mods")
+      .del("mods")
       .then(() => console.log(`Cleared cached modlist on ${action}`));
     await refreshModerators(context);
   }
