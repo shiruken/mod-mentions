@@ -5,11 +5,11 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@devvit/protos": "0.10.13",
-    "@devvit/public-api": "0.10.13"
+    "@devvit/protos": "0.10.14",
+    "@devvit/public-api": "0.10.14"
   },
   "devDependencies": {
-    "@devvit/tsconfig": "0.10.13",
+    "@devvit/tsconfig": "0.10.14",
     "typescript": "4.9.3"
   }
 }
