@@ -18,8 +18,22 @@ https://developers.reddit.com/apps/mod-mentions
 
 ![Screenshot of App Configuration](https://github.com/shiruken/mod-mentions/assets/867617/a9f3a785-8858-4825-b7d5-a7cccd1fcc90)
 
-* [Slack Webhooks](https://api.slack.com/messaging/webhooks)
-* [Discord Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+* [Slack: Sending messages using Incoming Webhooks](https://api.slack.com/messaging/webhooks)
+* [Discord: Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+
+## Screenshots
+
+### Modmail
+
+![Modmail Example](https://github.com/shiruken/mod-mentions/assets/867617/bb89c958-2dad-4f3e-9945-d102ceb718a2)
+
+### Slack
+
+![Slack Example](https://github.com/shiruken/mod-mentions/assets/867617/327884e3-ca20-4f77-b5aa-47506a1c58dd)
+
+### Discord
+
+![Discord Example](https://github.com/shiruken/mod-mentions/assets/867617/337cee69-c9da-4e9b-b6b0-73eda2efe90f)
 
 ## Note
 
