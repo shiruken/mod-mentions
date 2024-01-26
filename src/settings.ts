@@ -51,7 +51,7 @@ export const configSettings: SettingsFormField[] = [
     type: 'string',
     name: 'webhookURL',
     label: 'Webhook URL (Slack or Discord)',
-    helpText: 'Enter webhook URL to send notification to Slack or Discord about content that mentions a subreddit moderator',
+    helpText: 'Enter webhook URL to send reports via Slack or Discord',
     defaultValue: '',
     onValidate: validateWebhookURL
   },
@@ -59,7 +59,7 @@ export const configSettings: SettingsFormField[] = [
     type: 'string',
     name: 'excludedMods',
     label: 'Exclude Moderators',
-    helpText: 'Comma-separated list of subreddit moderators to exclude from actions and notifications (AutoModerator and mod-mentions excluded by default)',
+    helpText: 'Ignore mentions of these moderators, entered as a comma-separated list (AutoModerator and app account excluded by default)',
     defaultValue: ''
   }
 ];
