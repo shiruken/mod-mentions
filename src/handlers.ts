@@ -213,6 +213,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
     if (settings.webhookURL && settings.webhookURL.startsWith("https://discord.com/api/webhooks/")) {
       const discordPayload = {
         username: "Moderator Mentions",
+        avatar_url: "https://raw.githubusercontent.com/shiruken/mod-mentions/main/assets/avatar.jpg",
         content: `The moderator [u/${mentionedMod}](https://www.reddit.com/user/${mentionedMod}) ` +
                  `has been mentioned in a ${type}`,
         embeds: [

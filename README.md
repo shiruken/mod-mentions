@@ -20,3 +20,7 @@ https://developers.reddit.com/apps/mod-mentions
 
 * [Slack Webhooks](https://api.slack.com/messaging/webhooks)
 * [Discord Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+
+## Note
+
+The [avatar](/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer.
