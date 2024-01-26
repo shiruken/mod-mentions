@@ -1,15 +1,15 @@
 import { SettingsFormField, SettingsFormFieldValidatorEvent, TriggerContext } from '@devvit/public-api';
 
 /**
- * Settings
- * @typeParam reportContent: Enable content reporting
- * @typeParam lockContent: Enable content locking
- * @typeParam removeContent: Enable content removal
- * @typeParam modmailContent: Enable modmail notification
- * @typeParam webhookURL: Slack or Discord webhook URL
- * @typeParam excludedMods: Moderators excluded from actions and notifications
+ * App configuration data structure
+ * @property {boolean} reportContent: Enable content reporting
+ * @property {boolean} lockContent: Enable content locking
+ * @property {boolean} removeContent: Enable content removal
+ * @property {boolean} modmailContent: Enable modmail notification
+ * @property {string} webhookURL: Slack or Discord webhook URL
+ * @property {string} excludedMods: Moderators excluded from actions and notifications
  */
-export type Settings = {
+interface Settings {
   reportContent: boolean,
   lockContent: boolean,
   removeContent: boolean,
