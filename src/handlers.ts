@@ -175,20 +175,27 @@ async function checkModMention(id: string, authorName: string, text: string, con
             text: {
               type: "mrkdwn",
               text: `The moderator <https://www.reddit.com/user/${mentionedMod}|u/${mentionedMod}> ` +
-                    `has been mentioned in a ${type}:`
+                    `has been mentioned in a ${type}`
             }
-          },
+          }
+        ],
+        attachments: [
           {
-            type: "context",
-            elements: [
+            color: "#FF4500", // OrangeRed
+            blocks: [
               {
-                type: "mrkdwn",
-                text: `https://www.reddit.com${object.permalink}\n` +
-                      `*User:* <https://www.reddit.com/user/${object.authorName}|u/${object.authorName}>` +
-                      (('title' in object) ? `\n*Title:* ${object.title}` : "") +
-                      ((object.body) ? `\n*Body:* ${object.body}` : "") +
-                      ((user.count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${object.subredditName} ` +
-                                          `moderators ${user.count.toLocaleString()} times_` : "")
+                type: "context",
+                elements: [
+                  {
+                    type: "mrkdwn",
+                    text: `https://www.reddit.com${object.permalink}\n` +
+                          `*User:* <https://www.reddit.com/user/${object.authorName}|u/${object.authorName}>` +
+                          (('title' in object) ? `\n*Title:* ${object.title}` : "") +
+                          ((object.body) ? `\n*Body:* ${object.body}` : "") +
+                          ((user.count > 1) ? `\n\n_u/${object.authorName} has mentioned r/${object.subredditName} ` +
+                                              `moderators ${user.count.toLocaleString()} times_` : "")
+                  }
+                ]
               }
             ]
           }
