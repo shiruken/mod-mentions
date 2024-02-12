@@ -35,6 +35,12 @@ https://developers.reddit.com/apps/mod-mentions
 
 ![Discord Example](https://github.com/shiruken/mod-mentions/assets/867617/337cee69-c9da-4e9b-b6b0-73eda2efe90f)
 
+### Leaderboard
+
+![Generate Leaderboard Action](https://github.com/shiruken/mod-mentions/assets/867617/806cf432-f8f4-4dfe-b50a-1f4b09e6e33f)
+
+![Modmail Message](https://github.com/shiruken/mod-mentions/assets/867617/6ee19879-6882-419a-8750-9d8331e9995c)
+
 ## Note
 
 The [avatar](/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer.
