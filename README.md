@@ -41,6 +41,11 @@ https://developers.reddit.com/apps/mod-mentions
 
 ![Modmail Message](https://github.com/shiruken/mod-mentions/assets/867617/6ee19879-6882-419a-8750-9d8331e9995c)
 
-## Note
+## Links
 
-The [avatar](/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer.
+* [Source Code](https://github.com/shiruken/mod-mentions)
+* [Changelog](https://github.com/shiruken/mod-mentions/releases)
+* [Terms and Conditions](https://github.com/shiruken/mod-mentions/blob/main/TERMS.md)
+* [Privacy Policy](https://github.com/shiruken/mod-mentions/blob/main/PRIVACY.md)
+
+_Note: The [avatar](/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer._
