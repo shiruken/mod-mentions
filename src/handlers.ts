@@ -1,14 +1,14 @@
-import { Comment, Context, MenuItemOnPressEvent, OnTriggerEvent, Post, TriggerContext } from '@devvit/public-api';
+import { Comment, Context, MenuItemOnPressEvent, Post, TriggerContext } from '@devvit/public-api';
 import { AppInstall, AppUpgrade, CommentSubmit, CommentUpdate, ModAction, PostSubmit, PostUpdate } from '@devvit/protos';
 import { getValidatedSettings } from './settings.js';
 import { getModerators, getUserData, getUsersCountSorted, storeModerators, storeUserData } from './storage.js';
 
 /**
  * Checks post for moderator mentions
- * @param event An OnTriggerEvent object
+ * @param event An PostSubmit or PostUpdate object
  * @param context A TriggerContext object
  */
-export async function onPostEvent(event: OnTriggerEvent<PostSubmit | PostUpdate>, context: TriggerContext) {
+export async function onPostEvent(event: PostSubmit | PostUpdate, context: TriggerContext) {
   const authorName = event.author?.name;
   if (!authorName) {
     throw new Error('Missing authorName in onPostEvent');
@@ -29,10 +29,10 @@ export async function onPostEvent(event: OnTriggerEvent<PostSubmit | PostUpdate>
 
 /**
  * Checks comment for moderator mentions
- * @param event An OnTriggerEvent object
+ * @param event An CommentSubmit or CommentUpdate object
  * @param context A TriggerContext object
  */
-export async function onCommentEvent(event: OnTriggerEvent<CommentSubmit | CommentUpdate>, context: TriggerContext) {
+export async function onCommentEvent(event: CommentSubmit | CommentUpdate, context: TriggerContext) {
   const authorName = event.author?.name;
   if (!authorName) {
     throw new Error('Missing authorName in onCommentEvent');
@@ -327,13 +327,13 @@ export async function generateLeaderboard(_event: MenuItemOnPressEvent, context:
 
 /**
  * Cache modlist during app install or upgrade
- * @param event An OnTriggerEvent object
+ * @param event An AppInstall or AppUpgrade object
  * @param context A TriggerContext object
  */
-export async function onAppChanged(event: OnTriggerEvent<AppInstall | AppUpgrade>, context: TriggerContext) {
+export async function onAppChanged(_event: AppInstall | AppUpgrade, context: TriggerContext) {
   await context.redis
     .del("mods")
-    .then(() => console.log(`Cleared cached modlist on ${event.type}`));
+    .then(() => console.log("Cleared cached modlist on app change"));
   
   // Migrate existing KV Store data to Redis 'user' hash
   const keys = await context.kvStore.list();
@@ -356,10 +356,10 @@ export async function onAppChanged(event: OnTriggerEvent<AppInstall | AppUpgrade
 
 /**
  * Update cached modlist on modlist change
- * @param event An OnTriggerEvent object
+ * @param event A ModAction object
  * @param context A TriggerContext object
  */
-export async function onModAction(event: OnTriggerEvent<ModAction>, context: TriggerContext) {
+export async function onModAction(event: ModAction, context: TriggerContext) {
   const action = event.action;
   if (!action) {
     throw new Error(`Missing action in onModAction`);
@@ -375,9 +375,9 @@ export async function onModAction(event: OnTriggerEvent<ModAction>, context: Tri
 
 /**
  * Refresh cached subreddit modlist
- * @param context A Context or TriggerContext object
+ * @param context A TriggerContext object
  */
-async function refreshModerators(context: Context | TriggerContext) {
+async function refreshModerators(context: TriggerContext) {
   const subreddit = await context.reddit.getCurrentSubreddit();
   const moderators: string[] = [];
   try {
