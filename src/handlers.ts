@@ -153,7 +153,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
-                   ((object.body) ? `\n\n* **Body:** ${object.body}` : "") +
+                   ((object.body) ? `\n\n* **Body:** ${quoteText(object.body)}` : "") +
                    ((user.count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${object.subredditName} ` + 
                                        `moderators ${user.count.toLocaleString()} times)` : "");
       await context.reddit.modMail.createConversation({
@@ -372,4 +372,13 @@ async function refreshModerators(context: TriggerContext) {
     throw new Error(`Fetched modlist for r/${subreddit.name} is empty, skipping cache update`);
   }
   await storeModerators(moderators, context);
+}
+
+/**
+ * Format string as quoted text in Reddit Markdown
+ * @param text A string to format as quoted text
+ * @returns A string containing quoted text
+ */
+function quoteText(text: string): string {
+  return "\n >" + text.replace(/\n/g, "\n> ");
 }
