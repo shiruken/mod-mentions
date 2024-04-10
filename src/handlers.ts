@@ -334,23 +334,6 @@ export async function onAppChanged(_event: AppInstall | AppUpgrade, context: Tri
   await context.redis
     .del("mods")
     .then(() => console.log("Cleared cached modlist on app change"));
-  
-  // Migrate existing KV Store data to Redis 'user' hash
-  const keys = await context.kvStore.list();
-  keys.forEach(async key => {
-    if (key === "users" || key === "mods") {
-      return;
-    }
-    if (key != "$mods") {
-      console.log(`Migrating KVStore data for u/${key} to Redis 'user' hash`);
-      const value = await context.redis.get(key);
-      if (value) {
-        await context.redis.hset("users", {[key]: value});
-      }
-    }
-    await context.kvStore.delete(key);
-  });
-
   await refreshModerators(context);
 }
 
