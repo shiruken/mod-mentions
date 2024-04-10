@@ -1,7 +1,7 @@
 import { Comment, Context, MenuItemOnPressEvent, Post, TriggerContext } from '@devvit/public-api';
 import { AppInstall, AppUpgrade, CommentSubmit, CommentUpdate, ModAction, PostSubmit, PostUpdate } from '@devvit/protos';
 import { getValidatedSettings } from './settings.js';
-import { getModerators, getUserData, getUsersCountSorted, storeModerators, storeUserData } from './storage.js';
+import { clearModerators, getModerators, getUserData, getUsersCountSorted, storeModerators, storeUserData } from './storage.js';
 
 /**
  * Checks post for moderator mentions
@@ -331,8 +331,7 @@ export async function generateLeaderboard(_event: MenuItemOnPressEvent, context:
  * @param context A TriggerContext object
  */
 export async function onAppChanged(_event: AppInstall | AppUpgrade, context: TriggerContext) {
-  await context.redis
-    .del("mods")
+  await clearModerators(context)
     .then(() => console.log("Cleared cached modlist on app change"));
   await refreshModerators(context);
 }
@@ -349,8 +348,7 @@ export async function onModAction(event: ModAction, context: TriggerContext) {
   }
   const actions = ['acceptmoderatorinvite', 'addmoderator', 'removemoderator', 'reordermoderators'];
   if (actions.includes(action)) {
-    await context.redis
-      .del("mods")
+    await clearModerators(context)
       .then(() => console.log(`Cleared cached modlist on ${action}`));
     await refreshModerators(context);
   }
