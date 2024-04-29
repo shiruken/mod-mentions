@@ -2,7 +2,7 @@
 
 Get notified about moderator username mentions in your subreddit and (optionally) action the content. Supports Modmail, Slack, and Discord. Generate reports to easily identify the top offenders.
 
-https://developers.reddit.com/apps/mod-mentions
+[https://developers.reddit.com/apps/mod-mentions](https://developers.reddit.com/apps/mod-mentions)
 
 ## Features
 
@@ -48,4 +48,4 @@ https://developers.reddit.com/apps/mod-mentions
 * [Terms and Conditions](https://github.com/shiruken/mod-mentions/blob/main/TERMS.md)
 * [Privacy Policy](https://github.com/shiruken/mod-mentions/blob/main/PRIVACY.md)
 
-_Note: The [avatar](/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer._
+_Note: The [avatar](https://raw.githubusercontent.com/shiruken/mod-mentions/main/assets/avatar.jpg) used in this project [was generated](https://www.bing.com/images/create/reddit-snoo-with-red-chat-bubble/1-65b40a11568c47adb04431b185d844e0?id=B84TaPWFCr4rXj3PWYi4rg%3d%3d&view=detailv2&idpp=genimg&FORM=GCRIDP&mode=overlay) using Image Creator from Microsoft Designer._
