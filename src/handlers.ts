@@ -380,5 +380,5 @@ async function refreshModerators(context: TriggerContext) {
  * @returns A string containing quoted text
  */
 function quoteText(text: string): string {
-  return "\n >" + text.replace(/\n/g, "\n> ");
+  return "\n > " + text.replace(/\n/g, "\n> ");
 }
