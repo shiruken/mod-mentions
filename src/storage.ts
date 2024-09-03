@@ -18,7 +18,7 @@ export type User = {
  * @returns A Promise that resolves to a {@link User} object
  */
 export async function getUserData(username: string, context: TriggerContext): Promise<User> {
-  const value = await context.redis.hget("users", username);
+  const value = await context.redis.hGet("users", username);
   let user: User;
   if (!value) {
     user = { count: 0, objects: [] };
@@ -41,7 +41,7 @@ export async function storeUserData(username: string, user: User, context: Trigg
     console.log(`Dropped ${object} from u/${username} in Redis`);
   }
   await context.redis
-    .hset("users", { [username]: JSON.stringify(user) })
+    .hSet("users", { [username]: JSON.stringify(user) })
     .catch((e) => console.error(`Error writing u/${username} to Redis`, e));
 }
 
@@ -51,7 +51,7 @@ export async function storeUserData(username: string, user: User, context: Trigg
  * @returns A promise that resolves to a array of arrays containing `[username, count]`
  */
 export async function getUsersCountSorted(context: Context): Promise<[string, number][]> {
-  const users = await context.redis.hgetall("users");
+  const users = await context.redis.hGetAll("users");
   const counts: [string, number][] = [];
   for (const username in users) {
     const user: User = JSON.parse(String(users[username]));
