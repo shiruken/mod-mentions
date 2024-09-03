@@ -96,7 +96,9 @@ async function checkModMention(id: string, authorName: string, text: string, con
   // Check if any subreddit moderators are mentioned
   // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
   const text_lowercase = text.toLowerCase();
-  const index = modWatchList.findIndex(m => text_lowercase.includes(`u/${m.toLowerCase()}`));
+  const index = modWatchList.findIndex(m => text_lowercase.includes(
+    (settings.requirePrefix ? "u/" : "") + m.toLowerCase()
+  ));
   const mentionedMod = modWatchList[index];
 
   // Execute actions and send notifications
