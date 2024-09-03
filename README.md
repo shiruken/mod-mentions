@@ -7,21 +7,22 @@ Get notified about moderator username mentions in your subreddit and (optionally
 ## Features
 
 * Minimal setup requiring **zero** knowledge about AutoModerator or coding
+* Automatically handles changes to your mod team - No input required!
+  * Easily exclude moderators
 * Monitors posts and comments (both new and edited)
-* Automatically action identified content (Report, Lock, and Remove)
+* Action identified content (Report, Lock, and Remove)
 * Notifications via Modmail, Slack, or Discord
-* Easily exclude moderators
 * Tracks users to identify repeat offenders
-* Top 10 report delivered via Modmail
+  * Top 10 report delivered via Modmail
 
-## Configuration
+## Installation Settings
 
-![Screenshot of App Configuration](https://github.com/shiruken/mod-mentions/assets/867617/a9f3a785-8858-4825-b7d5-a7cccd1fcc90)
+![Screenshot of Installation Settings](https://github.com/user-attachments/assets/1279d02b-3df5-4a54-b555-56f17628e595)
 
 * [Slack: Sending messages using Incoming Webhooks](https://api.slack.com/messaging/webhooks)
 * [Discord: Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 
-## Screenshots
+## Notifications
 
 ### Modmail
 
@@ -35,11 +36,11 @@ Get notified about moderator username mentions in your subreddit and (optionally
 
 ![Discord Example](https://github.com/shiruken/mod-mentions/assets/867617/337cee69-c9da-4e9b-b6b0-73eda2efe90f)
 
-### Leaderboard
+## Menu Action
 
-![Generate Leaderboard Action](https://github.com/shiruken/mod-mentions/assets/867617/bb396591-aec9-4be4-811d-c4e2d8814671)
+### Mod Mentions Leaderboard
 
-![Modmail Message](https://github.com/shiruken/mod-mentions/assets/867617/6ee19879-6882-419a-8750-9d8331e9995c)
+![Screenshot of 'Mod Mentions Leaderboard' Menu Action](https://github.com/user-attachments/assets/25da0405-eca7-4c1a-b9a4-4180a82472f8) ![Screenshot of 'Mod Mentions Leaderboard' Modmail Message](https://github.com/shiruken/mod-mentions/assets/867617/6ee19879-6882-419a-8750-9d8331e9995c)
 
 ## Links
 
