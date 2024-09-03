@@ -1,14 +1,5 @@
 import { Context, TriggerContext } from "@devvit/public-api";
-
-/**
- * User
- * @typeParam count: Total number of mod mentions by user (all time)
- * @typeParam objects: List of recent Reddit object ids from user that mentioned mods
- */
-export type User = {
-  count: number,
-  objects: string[]
-};
+import { User } from "./types.js";
 
 /**
  * Read {@link User} object for `username` from Redis hash.

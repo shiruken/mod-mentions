@@ -1,24 +1,5 @@
 import { SettingsFormField, SettingsFormFieldValidatorEvent, TriggerContext } from '@devvit/public-api';
-
-/**
- * App configuration data structure
- * @property {string} excludedMods: Moderators excluded from actions and notifications
- * @property {boolean} requirePrefix: Mentions must contain the u/ prefix
- * @property {boolean} reportContent: Enable content reporting
- * @property {boolean} lockContent: Enable content locking
- * @property {boolean} removeContent: Enable content removal
- * @property {boolean} modmailContent: Enable modmail notification
- * @property {string} webhookURL: Slack or Discord webhook URL
- */
-interface Settings {
-  excludedMods: string,
-  requirePrefix: boolean,
-  reportContent: boolean,
-  lockContent: boolean,
-  removeContent: boolean,
-  modmailContent: boolean,
-  webhookURL: string,
-};
+import { Settings } from './types.js';
 
 export const configSettings: SettingsFormField[] = [
   {
