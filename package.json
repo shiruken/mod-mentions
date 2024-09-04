@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "mod-mentions",
-  "version": "0.9.15",
+  "version": "1.0.0",
   "license": "MIT",
   "type": "module",
   "dependencies": {
