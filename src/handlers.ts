@@ -65,10 +65,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
     return;
   }
 
-  const settings = await getValidatedSettings(context);
-  const excludedMods = settings.excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
-  const excludedModsList = (excludedMods == "") ? [] : excludedMods.toLowerCase().split(",");
-  excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
+  const settings = await getValidatedSettings(context); // App installation settings
 
   // Get cached modlist
   let moderators = await getModerators(context);
@@ -80,6 +77,11 @@ async function checkModMention(id: string, authorName: string, text: string, con
       throw new Error('Modlist refresh failed');
     }
   }
+
+  // Parse excluded mods
+  const excludedMods = settings.excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
+  const excludedModsList = (excludedMods == "") ? [] : excludedMods.toLowerCase().split(",");
+  excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
 
   // Identify monitored moderators
   const modWatchList: string[] = [];
@@ -94,12 +96,13 @@ async function checkModMention(id: string, authorName: string, text: string, con
   }
 
   // Check if any subreddit moderators are mentioned
-  // Not robust, only returns first mention and cannot handle substrings (e.g. u/spez vs. u/spez_bot)
-  const text_lowercase = text.toLowerCase();
-  const index = modWatchList.findIndex(m => text_lowercase.includes(
-    (settings.requirePrefix ? "u/" : "") + m.toLowerCase()
-  ));
-  const mentionedMod = modWatchList[index];
+  // - Only returns first match
+  // - Requires exact username match (e.g. u/spez does not match u/spez_bot)
+  const mentionedMod = modWatchList.find(moderator => {
+    const search = (settings.requirePrefix ? "u\\/" : "") + moderator;
+    const regex = new RegExp(`(^|\\s|\\[)(u\\/)?${search}($|[\\s.,!?;:\\]])`, 'i');
+    return regex.test(text);
+  });
 
   // Execute actions and send notifications
   if (mentionedMod !== undefined) {
