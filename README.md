@@ -17,10 +17,18 @@ Get notified about moderator username mentions in your subreddit and (optionally
 
 ## Installation Settings
 
-![Screenshot of Installation Settings](https://github.com/user-attachments/assets/1279d02b-3df5-4a54-b555-56f17628e595)
+![Screenshot of Installation Settings](https://github.com/user-attachments/assets/8b881107-6179-49ce-afa1-9e41e20de2e6)
 
-* [Slack: Sending messages using Incoming Webhooks](https://api.slack.com/messaging/webhooks)
-* [Discord: Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+* **Require u/ prefix:** Mentions must contain the `u/` username-linking prefix to trigger an action or notification. Disable to check for any username mention regardless of the presence of the prefix (vulnerable to false positives if moderator usernames are common words).
+  * When enabled, "Hey u/spez" will trigger the app but "Hey spez" will not. When disabled, both phrases will trigger the app.
+* **Excluded Moderators:** Ignore mentions of these moderators, entered as a comma-separated list (e.g. `spez, kn0thing, KeyserSosa`)
+  * AutoModerator and the app account (u/mod-mentions) are automatically excluded
+* **Actions:** Moderator actions (report, lock, and remove) to take on content that mentions a subreddit moderator
+* **Notifications**
+  * **Send Modmail:** Send notification via Modmail
+  * **Webhook URL:** Send notification to Slack or Discord via webhook
+    * [Slack: Sending messages using Incoming Webhooks](https://api.slack.com/messaging/webhooks)
+    * [Discord: Intro to Webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 
 ## Notifications
 
