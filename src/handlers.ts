@@ -376,6 +376,7 @@ async function refreshModerators(context: TriggerContext) {
   if (!moderators.length) {
     throw new Error(`Fetched modlist for r/${subreddit.name} is empty, skipping cache update`);
   }
+  moderators.push(`${subreddit.name}-ModTeam`); // Include subreddit team account
   await storeModerators(moderators, context);
 }
 
