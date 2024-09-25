@@ -99,8 +99,8 @@ async function checkModMention(id: string, authorName: string, text: string, con
   // - Only returns first match
   // - Requires exact username match (e.g. u/spez does not match u/spez_bot)
   const mentionedMod = modWatchList.find(moderator => {
-    const search = (settings.requirePrefix ? "u\\/" : "") + moderator;
-    const regex = new RegExp(`(^|\\s|\\[)(u\\/)?${search}($|[\\s.,!?;:\\]])`, 'i');
+    const search = (settings.requirePrefix ? "" : "?") + moderator;
+    const regex = new RegExp(`(^|\\s|\\[)(\\/?u\\/)${search}($|[\\s.,!?;:\\]])`, 'i');
     return regex.test(text);
   });
 
