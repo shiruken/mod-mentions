@@ -161,11 +161,10 @@ async function checkModMention(id: string, authorName: string, text: string, con
                    ((object.body) ? `\n\n* **Body:** ${quoteText(object.body)}` : "") +
                    ((user.count > 1) ? `\n\n^(u/${object.authorName} has mentioned r/${object.subredditName} ` + 
                                        `moderators ${user.count.toLocaleString()} times)` : "");
-      await context.reddit.modMail.createConversation({
-        to: "mod-mentions",
+      await context.reddit.modMail.createModInboxConversation({
+        subredditId: object.subredditId,
         subject: "Moderator Mentioned",
-        body: body,
-        subredditName: object.subredditName,
+        bodyMarkdown: body,
       })
       .then(() => console.log(`Sent modmail about ${object.id}`))
       .catch((e) => console.error(`Error sending modmail about ${object.id}`, e));
@@ -308,11 +307,10 @@ export async function generateLeaderboard(_event: MenuItemOnPressEvent, context:
                `Requested by u/${currentUser!.username}.)`;
 
   await context.reddit.modMail
-    .createConversation({
-      to: "mod-mentions",
+    .createModInboxConversation({
+      subredditId: subreddit.id,
       subject: "Moderator Mentions Leaderboard",
-      body: body,
-      subredditName: subreddit.name,
+      bodyMarkdown: body,
     })
     .then(() => {
       console.log('Sent modmail with leaderboard');
