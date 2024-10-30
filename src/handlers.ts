@@ -1,5 +1,6 @@
-import { Comment, Context, MenuItemOnPressEvent, Post, TriggerContext } from '@devvit/public-api';
-import { AppInstall, AppUpgrade, CommentSubmit, CommentUpdate, ModAction, PostSubmit, PostUpdate } from '@devvit/protos';
+import { Comment, Post } from '@devvit/public-api';
+import type { Context, MenuItemOnPressEvent, TriggerContext } from '@devvit/public-api';
+import type { AppInstall, AppUpgrade, CommentSubmit, CommentUpdate, ModAction, PostSubmit, PostUpdate } from '@devvit/protos';
 import { getValidatedSettings } from './settings.js';
 import { clearModerators, getModerators, getUserData, getUsersCountSorted, storeModerators, storeUserData } from './storage.js';
 

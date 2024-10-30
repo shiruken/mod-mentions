@@ -1,5 +1,5 @@
-import { Context, TriggerContext } from "@devvit/public-api";
-import { User } from "./types.js";
+import type { Context, TriggerContext } from "@devvit/public-api";
+import type { User } from "./types.js";
 
 /**
  * Read {@link User} object for `username` from Redis hash.

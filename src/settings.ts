@@ -1,5 +1,5 @@
-import { SettingsFormField, SettingsFormFieldValidatorEvent, TriggerContext } from '@devvit/public-api';
-import { Settings } from './types.js';
+import type { SettingsFormField, SettingsFormFieldValidatorEvent, TriggerContext } from '@devvit/public-api';
+import type { Settings } from './types.js';
 
 export const configSettings: SettingsFormField[] = [
   {
