@@ -108,6 +108,11 @@ async function checkModMention(id: string, authorName: string, text: string, con
   // Execute actions and send notifications
   if (mentionedMod !== undefined) {
 
+    if (mentionedMod.toLowerCase() == authorName.toLowerCase()) {
+      console.log(`Skipping self-mention by u/${authorName} in ${id}`);
+      return;
+    }
+
     let object: Post | Comment;
     let type: string;
     if (id.includes("t3_")) {
