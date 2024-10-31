@@ -48,6 +48,8 @@ Get notified about moderator username mentions in your subreddit and (optionally
 
 ### Mod Mentions Leaderboard
 
+This action appears under the moderator menu for the subreddit. It generates a leaderboard listing the *users* that have mentioned the most moderators.
+
 ![Screenshot of 'Mod Mentions Leaderboard' Menu Action](https://github.com/user-attachments/assets/25da0405-eca7-4c1a-b9a4-4180a82472f8) ![Screenshot of 'Mod Mentions Leaderboard' Modmail Message](https://github.com/shiruken/mod-mentions/assets/867617/6ee19879-6882-419a-8750-9d8331e9995c)
 
 ## Changelog
