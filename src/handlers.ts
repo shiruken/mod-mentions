@@ -83,6 +83,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
   const excludedMods = settings.excludedMods.replace(/(\/?u\/)|\s/g, ""); // Strip out user tags and spaces
   const excludedModsList = (excludedMods == "") ? [] : excludedMods.toLowerCase().split(",");
   excludedModsList.push('mod-mentions', 'automoderator'); // Always exclude app account and AutoModerator
+  excludedModsList.push(authorName.toLowerCase()); // Skip self-mentions
 
   // Identify monitored moderators
   const modWatchList: string[] = [];
@@ -107,11 +108,6 @@ async function checkModMention(id: string, authorName: string, text: string, con
 
   // Execute actions and send notifications
   if (mentionedMod !== undefined) {
-
-    if (mentionedMod.toLowerCase() == authorName.toLowerCase()) {
-      console.log(`Skipping self-mention by u/${authorName} in ${id}`);
-      return;
-    }
 
     let object: Post | Comment;
     let type: string;
