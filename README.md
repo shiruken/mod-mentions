@@ -54,6 +54,8 @@ Get notified about moderator username mentions in your subreddit and (optionally
 
 *[View Releases on GitHub](https://github.com/shiruken/mod-mentions/releases)*
 
+* v1.3
+  * Detect all mentioned moderators
 * v1.2
   * Ignore self-mentions
   * Modmail notifications routed into Inbox rather than Mod Discussions
