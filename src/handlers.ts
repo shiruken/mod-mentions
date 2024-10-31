@@ -97,17 +97,17 @@ async function checkModMention(id: string, authorName: string, text: string, con
     throw new Error(`All moderators are excluded: ${excludedModsList.join(', ')}`);
   }
 
-  // Check if any subreddit moderators are mentioned
-  // - Only returns first match
+  // Check if subreddit moderators are mentioned
+  // - Identifies all mentioned moderators
   // - Requires exact username match (e.g. u/spez does not match u/spez_bot)
-  const mentionedMod = modWatchList.find(moderator => {
+  const mentionedMods = modWatchList.filter(moderator => {
     const search = (settings.requirePrefix ? "" : "?") + moderator;
     const regex = new RegExp(`(^|[^a-zA-Z0-9_\\/])(\\/?u\\/)${search}($|[^a-zA-Z0-9_\\/])`, 'i');
     return regex.test(text);
   });
 
   // Execute actions and send notifications
-  if (mentionedMod !== undefined) {
+  if (mentionedMods.length != 0) {
 
     let object: Post | Comment;
     let type: string;
@@ -119,7 +119,10 @@ async function checkModMention(id: string, authorName: string, text: string, con
       type = "comment";
     }
 
-    console.log(`${object.id} mentions u/${mentionedMod}`);
+    const formattedMods = formatMods(mentionedMods, "reddit");
+    const is_plural = mentionedMods.length > 1;
+
+    console.log(`${object.id} mentions ${formattedMods}`);
 
     // Track object and update user in Redis
     user.count += 1;
@@ -133,7 +136,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
     // Report Content
     if (settings.reportContent) {
       await context.reddit
-        .report(object, { reason: `Mentions moderator u/${mentionedMod}` })
+        .report(object, { reason: `Mentions moderator${is_plural ? "s" : ""} ${formattedMods}` })
         .then(() => console.log(`Reported ${object.id}`))
         .catch((e) => console.error(`Error reporting ${object.id}`, e));
     }
@@ -156,7 +159,8 @@ async function checkModMention(id: string, authorName: string, text: string, con
 
     // Send Modmail
     if (settings.modmailContent) {
-      const body = `The moderator u/${mentionedMod} has been mentioned in a ${type}:\n\n` +
+      const body = `The moderator${is_plural ? "s" : ""} ${formattedMods} ` +
+                   `${is_plural ? "have" : "has"} been mentioned in a ${type}:\n\n` +
                    `* **Link:** https://www.reddit.com${object.permalink}\n\n` +
                    `* **User:** u/${object.authorName}` +
                    (('title' in object) ? `\n\n* **Title:** ${object.title}` : "") +
@@ -165,7 +169,7 @@ async function checkModMention(id: string, authorName: string, text: string, con
                                        `moderators ${user.count.toLocaleString()} times)` : "");
       await context.reddit.modMail.createModInboxConversation({
         subredditId: object.subredditId,
-        subject: "Moderator Mentioned",
+        subject: `Moderator${is_plural ? "s" : ""} Mentioned`,
         bodyMarkdown: body,
       })
       .then(() => console.log(`Sent modmail about ${object.id}`))
@@ -180,8 +184,8 @@ async function checkModMention(id: string, authorName: string, text: string, con
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `The moderator <https://www.reddit.com/user/${mentionedMod}|u/${mentionedMod}> ` +
-                    `has been mentioned in a ${type}`
+              text: `The moderator${is_plural ? "s" : ""} ${formatMods(mentionedMods, "slack")} ` +
+                    `${is_plural ? "have" : "has"} been mentioned in a ${type}`
             }
           }
         ],
@@ -220,8 +224,8 @@ async function checkModMention(id: string, authorName: string, text: string, con
       const discordPayload = {
         username: "Moderator Mentions",
         avatar_url: "https://raw.githubusercontent.com/shiruken/mod-mentions/main/assets/avatar.jpg",
-        content: `The moderator [u/${mentionedMod}](https://www.reddit.com/user/${mentionedMod}) ` +
-                 `has been mentioned in a ${type}`,
+        content: `The moderator${is_plural ? "s" : ""} ${formatMods(mentionedMods, "discord")} ` +
+                 `${is_plural ? "have" : "has"} been mentioned in a ${type}`,
         embeds: [
           {
             color: 16711680, // #FF0000
@@ -387,4 +391,33 @@ async function refreshModerators(context: TriggerContext) {
  */
 function quoteText(text: string): string {
   return "\n > " + text.replace(/\n/g, "\n> ");
+}
+
+/**
+ * Format usernames for notification messages
+ * 
+ * Supports Reddit (Modmail), Slack, and Discord formats
+ * @param moderators A string array of usernames
+ * @param format String specifying the desired output format
+ * @returns A string of formatted usernames for display
+ */
+function formatMods(moderators: string[], format: "reddit" | "slack" | "discord"): string {
+  moderators = moderators.map((moderator) => {
+    if (format == "slack") {
+      return `<https://www.reddit.com/user/${moderator}|u/${moderator}>`;
+    } else if (format == "discord") {
+      return `[u/${moderator}](https://www.reddit.com/user/${moderator})`;
+    } else {
+      return `u/${moderator}`;
+    }
+  });
+
+  if (moderators.length == 1) {
+    return moderators[0];
+  } else if (moderators.length == 2) {
+    return moderators.join(" and ");
+  } else {
+    const last = moderators.pop();
+    return moderators.join(", ") + ", and " + last;
+  }
 }
