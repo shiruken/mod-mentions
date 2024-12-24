@@ -5,7 +5,6 @@ import { configSettings } from './settings.js';
 Devvit.configure({
   redditAPI: true,
   http: true,
-  redis: true,
 });
 
 Devvit.addSettings(configSettings);
